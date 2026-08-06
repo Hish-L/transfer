@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+# transfer — send a file as animated QR codes in your terminal.
+#
+#   curl -fsSL https://hish-l.github.io/transfer/qr.sh | bash -s -- myfile.pdf
+#
+# This bootstrap finds a usable python3, fetches the sender, checks it against
+# the hash pinned below, caches it, and hands over. Everything after that is
+# python.
+#
+# NOTE FOR READERS: under `curl ... | bash`, STDIN IS THIS SCRIPT. Anything
+# here that reads stdin — read, cat, a stray command that slurps it — eats the
+# rest of the source and the shell dies mid-parse. So nothing below touches
+# stdin, and the one place that could prompt uses /dev/tty instead.
+#
+# This file is generated. Edit cli/qr.sh.in, not the published qr.sh.
+
+set -euo pipefail
+umask 077
+
+PAYLOAD_SHA256="@PAYLOAD_SHA256@"
+PAYLOAD_VERSION="@VERSION@"
+BASE_URL="${QRTRANSFER_BASE_URL:-https://hish-l.github.io/transfer}"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/qrtransfer"
+BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
+
+die() { printf '%s\n' "$*" >&2; exit 1; }
+note() { printf '%s\n' "$*" >&2; }
+
+# --------------------------------------------------------------- bootstrap help
+
+bootstrap_help() {
+  cat <<EOF
+qr.sh — bootstrap for the transfer terminal sender (payload v${PAYLOAD_VERSION})
+
+  curl -fsSL ${BASE_URL}/qr.sh | bash -s -- myfile.pdf
+
+Options handled here (everything else, --help included, goes to the sender):
+
+  --install            install a 'qr' command into ${BIN_DIR}
+  --uninstall          remove it, and the cache
+  --update             refetch the sender even if it is cached
+  --offline            use the cache only; never touch the network
+  --local FILE         run a local qrsend.py instead of fetching
+  --bootstrap-help     this message
+  --bootstrap-version  print the bootstrap and payload versions
+
+Environment:
+
+  QRTRANSFER_PYTHON    python3 to use
+  QRTRANSFER_BASE_URL  where to fetch from
+  XDG_CACHE_HOME       cache location (default ~/.cache)
+
+On trust: qr.sh and qrsend.py are served from the same origin over the same
+connection, so the pinned hash is integrity against a truncated or corrupted
+download, and a payload identity you can audit against the published release.
+It is not protection from a compromised origin — piping a URL into a shell is
+trust-on-first-use of that origin, and no hash inside the pipe changes that.
+If you would rather look first:
+
+  curl -fsSLO ${BASE_URL}/qr.sh && less qr.sh && bash qr.sh myfile.pdf
+EOF
+}
+
+# ------------------------------------------------------------- argument triage
+
+# A fixed, documented intercept list. Everything else is forwarded verbatim, so
+# adding a flag to the python sender can never silently collide with one here.
+LOCAL_PAYLOAD="${QRTRANSFER_PY:-}"
+DO_INSTALL=0
+DO_UNINSTALL=0
+FORCE_UPDATE=0
+OFFLINE=0
+ARGS=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --install) DO_INSTALL=1; shift ;;
+    --uninstall) DO_UNINSTALL=1; shift ;;
+    --update) FORCE_UPDATE=1; shift ;;
+    --offline) OFFLINE=1; shift ;;
+    --local)
+      [ $# -ge 2 ] || die "error: --local needs a path."
+      LOCAL_PAYLOAD="$2"; shift 2 ;;
+    --bootstrap-help) bootstrap_help; exit 0 ;;
+    --bootstrap-version)
+      printf 'bootstrap %s, payload %s\n' "$PAYLOAD_VERSION" "$PAYLOAD_VERSION"; exit 0 ;;
+    *) ARGS+=("$1"); shift ;;
+  esac
+done
+
+if [ "${EUID:-$(id -u)}" = "0" ] && [ "${QRTRANSFER_ALLOW_ROOT:-}" != "1" ]; then
+  die "error: refusing to run as root — this only needs to read one file.
+       Set QRTRANSFER_ALLOW_ROOT=1 if you really mean it."
+fi
+
+# ------------------------------------------------------------ find a python3
+
+find_python() {
+  local candidate
+  for candidate in \
+    "${QRTRANSFER_PYTHON:-}" python3 python3.14 python3.13 python3.12 python3.11 \
+    python3.10 python3.9 python3.8 \
+    /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3
+  do
+    [ -n "$candidate" ] || continue
+    command -v "$candidate" >/dev/null 2>&1 || continue
+    # The probe IS the test, not `command -v`. On a Mac without the Xcode
+    # command line tools, /usr/bin/python3 exists and is on PATH, but running
+    # it pops a GUI dialog and exits non-zero.
+    if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 8) else 1)' \
+       >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+python_help() {
+  if [ "$(uname -s)" = "Darwin" ]; then
+    cat >&2 <<'EOF'
+error: no usable python3 (3.8 or newer) was found.
+
+  On macOS, /usr/bin/python3 is a stub until the developer tools are
+  installed. Either:
+
+      xcode-select --install
+  or  brew install python
+EOF
+  else
+    local id=""
+    [ -r /etc/os-release ] && id="$(. /etc/os-release 2>/dev/null; printf '%s %s' "${ID:-}" "${ID_LIKE:-}")"
+    printf 'error: no usable python3 (3.8 or newer) was found.\n\n  Install it with:\n\n' >&2
+    case "$id" in
+      *debian*|*ubuntu*) printf '      sudo apt install python3\n' >&2 ;;
+      *fedora*|*rhel*|*centos*) printf '      sudo dnf install python3\n' >&2 ;;
+      *arch*) printf '      sudo pacman -S python\n' >&2 ;;
+      *alpine*) printf '      sudo apk add python3\n' >&2 ;;
+      *suse*) printf '      sudo zypper install python3\n' >&2 ;;
+      *) printf '      your package manager, as "python3"\n' >&2 ;;
+    esac
+  fi
+  exit 127
+}
+
+PY="$(find_python)" || python_help
+
+# ------------------------------------------------------------ fetch and verify
+
+sha256_of() {
+  # Use the python we already found rather than picking between shasum (macOS),
+  # sha256sum (Linux) and openssl dgst. It is a hard dependency either way.
+  "$PY" -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$1"
+}
+
+fetch_to() {
+  local url="$1" dest="$2"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$url" -o "$dest"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O "$dest" "$url"
+  else
+    die "error: neither curl nor wget is available."
+  fi
+}
+
+resolve_payload() {
+  if [ -n "$LOCAL_PAYLOAD" ]; then
+    [ -r "$LOCAL_PAYLOAD" ] || die "error: cannot read $LOCAL_PAYLOAD"
+    printf '%s\n' "$LOCAL_PAYLOAD"
+    return 0
+  fi
+
+  case "$PAYLOAD_SHA256" in
+    *@*)
+      # An unbuilt bootstrap. Failing closed matters here: the alternative is
+      # a script that silently stops verifying, which is worse than one that
+      # never pretended to.
+      [ "${QRTRANSFER_INSECURE:-}" = "1" ] || die \
+        "error: this qr.sh was not built — its hash pin is still a placeholder.
+       Build it with 'npm run build', use --local, or set QRTRANSFER_INSECURE=1."
+      ;;
+  esac
+
+  local cached="$CACHE_DIR/qrsend-${PAYLOAD_VERSION}-${PAYLOAD_SHA256:0:12}.py"
+  if [ "$FORCE_UPDATE" = "0" ] && [ -r "$cached" ]; then
+    if [ "$(sha256_of "$cached")" = "$PAYLOAD_SHA256" ]; then
+      printf '%s\n' "$cached"   # cache hit: no network at all
+      return 0
+    fi
+    rm -f "$cached"
+  fi
+
+  [ "$OFFLINE" = "0" ] || die "error: --offline, but nothing verified is cached at $cached"
+
+  mkdir -p "$CACHE_DIR"
+  local tmp
+  tmp="$(mktemp "$CACHE_DIR/.qrsend.XXXXXX")"
+  # shellcheck disable=SC2064
+  trap "rm -f '$tmp'" EXIT
+
+  fetch_to "$BASE_URL/qrsend.py" "$tmp" || die "error: could not download $BASE_URL/qrsend.py"
+
+  local got
+  got="$(sha256_of "$tmp")"
+  if [ "$got" != "$PAYLOAD_SHA256" ]; then
+    die "error: the downloaded sender does not match the hash this script pins.
+       expected $PAYLOAD_SHA256
+       got      $got
+       Refusing to run it. This is usually a partial download — try again."
+  fi
+  # Only now does it become a cached file. A truncated download must never be
+  # left behind under a name the next run would trust.
+  mv -f "$tmp" "$cached"
+  trap - EXIT
+  chmod 0644 "$cached"
+  printf '%s\n' "$cached"
+}
+
+# ------------------------------------------------------------------- subcommands
+
+if [ "$DO_UNINSTALL" = "1" ]; then
+  removed=0
+  if [ -e "$BIN_DIR/qr" ]; then rm -f "$BIN_DIR/qr"; note "removed $BIN_DIR/qr"; removed=1; fi
+  if [ -d "$CACHE_DIR" ]; then rm -rf "$CACHE_DIR"; note "removed $CACHE_DIR"; removed=1; fi
+  [ "$removed" = "1" ] || note "nothing to remove."
+  exit 0
+fi
+
+PAYLOAD="$(resolve_payload)"
+
+if [ "$DO_INSTALL" = "1" ]; then
+  mkdir -p "$BIN_DIR"
+  {
+    printf '#!/usr/bin/env python3\n'
+    tail -n +2 "$PAYLOAD"
+  } > "$BIN_DIR/qr"
+  chmod 0755 "$BIN_DIR/qr"
+  note "installed $BIN_DIR/qr (payload v${PAYLOAD_VERSION})"
+  case ":$PATH:" in
+    *":$BIN_DIR:"*) ;;
+    *)
+      # Warn, never edit a shell rc file. Rewriting someone's dotfiles as a
+      # side effect of an install flag is not a thing this should do.
+      note ""
+      note "$BIN_DIR is not on your PATH. Add it with:"
+      note ""
+      note "    export PATH=\"$BIN_DIR:\$PATH\""
+      ;;
+  esac
+  exit 0
+fi
+
+# exec, so signals, the exit code and job control all pass straight through and
+# this shell is out of the way. Python inherits the curl pipe as stdin, which is
+# harmless because nothing on that side ever reads it.
+exec "$PY" "$PAYLOAD" ${ARGS+"${ARGS[@]}"}

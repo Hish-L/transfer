@@ -1,0 +1,90 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>send — transfer</title>
+<meta name="description" content="Stream a file as animated fountain-coded QR codes." />
+<link rel="stylesheet" href="../shared/theme.css" />
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="wordmark"><a href="../">transfer</a></h1>
+    <p class="tagline">send</p>
+    <nav><a href="../receive/">receive &rarr;</a></nav>
+  </header>
+
+  <div class="settings-body" style="border: 0; padding-left: 0; padding-right: 0">
+    <label class="field">
+      <span>file &mdash; up to %MAX_FILE_LABEL%</span>
+      <input type="file" id="cfg-file" />
+    </label>
+    <label class="field">
+      <span>or a text snippet &mdash; up to %MAX_SNIPPET_LABEL%</span>
+      <textarea id="cfg-text" placeholder="paste text to send instead"></textarea>
+    </label>
+  </div>
+
+  <div class="stage-actions">
+    <button type="button" id="start" class="primary" disabled>Start stream</button>
+    <button type="button" id="stop" disabled>Stop</button>
+    <button type="button" id="full" disabled>Fullscreen</button>
+  </div>
+
+  <p class="status-line" id="status" role="status">pick a file, or paste some text</p>
+
+  <div class="stage" id="stage" hidden>
+    <canvas id="qr" width="1" height="1" aria-label="animated QR code stream"></canvas>
+    <div class="stage-actions">
+      <button type="button" id="exit-full" hidden>Exit fullscreen</button>
+    </div>
+  </div>
+
+  <h2 id="specs-heading" hidden>Stream</h2>
+  <div class="metrics" id="stream-specs" hidden>
+    <div class="metric"><div class="k">tx rate</div><div class="v hot" id="spec-fps">&mdash;</div></div>
+    <div class="metric"><div class="k">frame payload</div><div class="v" id="spec-frame">&mdash;</div></div>
+    <div class="metric"><div class="k">qr</div><div class="v" id="spec-qr">&mdash;</div></div>
+    <div class="metric"><div class="k">fountain blocks</div><div class="v" id="spec-k">&mdash;</div></div>
+    <div class="metric"><div class="k">compression</div><div class="v" id="spec-compression">&mdash;</div></div>
+    <div class="metric"><div class="k">sending</div><div class="v" id="spec-payload">&mdash;</div></div>
+  </div>
+
+  <details class="settings">
+    <summary>Stream settings</summary>
+    <div class="settings-body">
+      <label class="field">
+        <span>tx fps</span>
+        <select id="cfg-fps">%TX_FPS_OPTIONS%</select>
+      </label>
+      <label class="field">
+        <span>bytes / frame</span>
+        <select id="cfg-bytes">%FRAME_BYTES_OPTIONS%</select>
+      </label>
+      <label class="field">
+        <span>error correction</span>
+        <select id="cfg-ecc">
+          <option value="L" selected>L &mdash; most data</option>
+          <option value="M">M</option>
+          <option value="Q">Q</option>
+          <option value="H">H &mdash; most robust</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>display size</span>
+        <input type="range" id="cfg-size" min="300" max="1200" step="50" value="900" />
+      </label>
+      <p class="settings-note">
+        Bigger frames move more data per code but need a steadier camera. If the receiver sits at
+        zero, drop to 1465 bytes and 24 fps &mdash; that combination reads off almost anything.
+        Changing any setting restarts the stream.
+      </p>
+    </div>
+  </details>
+
+  <h2>Aim for</h2>
+  <p class="dim">
+    Fill the receiving camera's frame with the code and hold still. The stream never ends and never
+    knows whether anyone is listening &mdash; stop it yourself once the other device says the file is
+    verified.
+  </p>
+</div>
+
+<script type="module" src="./main.ts"></script>

@@ -1,0 +1,104 @@
+<meta charset="utf-8" />
+<!-- No maximum-scale: the settings controls all sit at a 16px floor instead, so
+     mobile Safari has no reason to zoom on focus and pinch-zoom stays usable. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>receive — transfer</title>
+<meta name="description" content="Rebuild a file from a stream of animated QR codes." />
+<link rel="stylesheet" href="../shared/theme.css" />
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="wordmark"><a href="../">transfer</a></h1>
+    <p class="tagline">receive</p>
+    <nav><a href="../send/">send &rarr;</a></nav>
+  </header>
+
+  <div class="stage-actions" style="justify-content: flex-start; margin-top: 1.25rem">
+    <button type="button" id="start" class="primary">Start camera</button>
+    <button type="button" id="stop" disabled>Stop</button>
+  </div>
+
+  <p class="status-line" id="status" role="status">point this camera at a sending screen</p>
+
+  <div class="viewport" id="viewport" hidden>
+    <video id="video" playsinline muted></video>
+    <div class="hud">
+      <div class="hud-labels">
+        <span id="progress-label">0% &middot; 0/0 blocks</span>
+        <span id="eta-label">Estimating time&hellip;</span>
+      </div>
+      <div
+        class="track"
+        id="progress"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div class="bar" id="bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <h3 id="result-heading">Received</h3>
+    <p id="result-summary"></p>
+    <div id="result-body"></div>
+  </div>
+
+  <details class="settings" id="diagnostics" open>
+    <summary id="diagnostics-summary">Live diagnostics</summary>
+    <div class="settings-body" style="display: block">
+      <div class="metrics" id="metrics">
+        <div class="metric"><div class="k">capture fps</div><div class="v" id="m-cap">&mdash;</div></div>
+        <div class="metric"><div class="k">decode fps</div><div class="v hot" id="m-dec">&mdash;</div></div>
+        <div class="metric"><div class="k">goodput</div><div class="v hot" id="m-rate">&mdash;</div></div>
+        <div class="metric"><div class="k">elapsed</div><div class="v" id="m-time">&mdash;</div></div>
+        <div class="metric"><div class="k">frames new/dup</div><div class="v" id="m-frames">&mdash;</div></div>
+        <div class="metric"><div class="k">dup rate</div><div class="v" id="m-dup">&mdash;</div></div>
+        <div class="metric"><div class="k">overhead</div><div class="v amber" id="m-overhead">&mdash;</div></div>
+        <div class="metric"><div class="k">passes</div><div class="v" id="m-pass">&mdash;</div></div>
+        <div class="metric"><div class="k">blocks K</div><div class="v" id="m-k">&mdash;</div></div>
+        <div class="metric"><div class="k">block len</div><div class="v" id="m-block">&mdash;</div></div>
+        <div class="metric"><div class="k">transfer</div><div class="v" id="m-payload">&mdash;</div></div>
+        <div class="metric"><div class="k">solved</div><div class="v" id="m-solved">&mdash;</div></div>
+      </div>
+      <div class="metric" style="border: 1px solid var(--line); border-top: 0">
+        <div class="k">decode fps &mdash; last 60s</div>
+        <canvas class="sparkline" id="spark" width="480" height="28" aria-hidden="true"></canvas>
+      </div>
+    </div>
+  </details>
+
+  <details class="settings">
+    <summary>Camera settings</summary>
+    <div class="settings-body">
+      <label class="field">
+        <span>capture width</span>
+        <select id="cfg-width">
+          <option value="960">960</option>
+          <option value="1280" selected>1280</option>
+          <option value="1920">1920</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>capture fps</span>
+        <select id="cfg-capfps">
+          <option value="30">30</option>
+          <option value="60" selected>60</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>decode workers</span>
+        <select id="cfg-workers">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+      </label>
+      <p class="settings-note" id="camera-actual">camera not started</p>
+    </div>
+  </details>
+</div>
+
+<script type="module" src="./main.ts"></script>

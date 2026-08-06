@@ -1,0 +1,76 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>transfer — files over light</title>
+<meta
+  name="description"
+  content="Move a file between two devices with nothing but a screen and a camera. Fountain-coded animated QR codes, no network path, no pairing, no app."
+/>
+<link rel="stylesheet" href="./shared/theme.css" />
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="wordmark">transfer</h1>
+    <p class="tagline">files over light</p>
+  </header>
+
+  <p style="margin-top: 1.5rem">
+    One screen displays a file as an endless stream of QR codes. Another device points a camera at
+    it and rebuilds the file. There is no network path between them — no Wi-Fi, no Bluetooth, no
+    pairing, no account. The bytes cross as light.
+  </p>
+
+  <div class="modes">
+    <a class="mode" href="./send/">
+      <span class="glyph" aria-hidden="true">&#9632;&#9633;&#9632;</span>
+      <span class="name">Send &rarr;</span>
+      <span class="what">Pick a file on this device and start the stream. Up to %MAX_FILE_LABEL%.</span>
+    </a>
+    <a class="mode" href="./receive/">
+      <span class="glyph" aria-hidden="true">&#9673;</span>
+      <span class="name">Receive &larr;</span>
+      <span class="what">Open the camera and point it at a sending screen.</span>
+    </a>
+  </div>
+
+  <h2>From a terminal</h2>
+  <p>
+    The sender also runs in a terminal — it draws the QR stream with half-block characters and any
+    phone can read it off the glass. macOS and Linux, python3 and nothing else.
+  </p>
+  <div class="oneliner">
+    <code id="cli-cmd">curl -fsSL https://hish-l.github.io/transfer/qr.sh | bash -s -- myfile.pdf</code>
+    <button type="button" id="cli-copy">Copy</button>
+  </div>
+  <p class="dim">
+    Piping a URL into a shell is trust-on-first-use of this origin. If you would rather look first:
+    <code>curl -fsSLO https://hish-l.github.io/transfer/qr.sh &amp;&amp; less qr.sh</code>, then
+    <code>bash qr.sh myfile.pdf</code>.
+  </p>
+
+  <h2>How it holds together</h2>
+  <p>
+    A camera pointed at a screen is a one-way link: the receiver has no way to ask for a frame it
+    missed. So the sender never waits to be asked. It emits an endless stream of
+    <strong>fountain-coded</strong> frames — each one a random XOR of source blocks — and the
+    receiver rebuilds the file from any sufficient set, in any order. Dropped, blurred, duplicated
+    and out-of-order frames cost time and nothing else.
+  </p>
+  <p>
+    Filename and media type survive the trip. Compression is applied only when it actually helps.
+    Nothing is offered to you until its <strong>SHA-256 matches</strong>.
+  </p>
+
+  <h2>What this is not</h2>
+  <p>
+    It is not encrypted. Whatever is on the sending screen is readable by any camera pointed at it,
+    including one you did not notice. The property you get is <em>no network</em>, not
+    confidentiality. Encrypt the file first if that is what you need.
+  </p>
+
+  <hr />
+  <p class="dim">
+    v%APP_VERSION%
+  </p>
+</div>
+
+<script type="module" src="./home.ts"></script>

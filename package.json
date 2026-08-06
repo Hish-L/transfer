@@ -1,0 +1,34 @@
+{
+  "name": "transfer",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Airgapped file transfer over animated, fountain-coded QR codes — screen to camera, no network.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && tsc -p tsconfig.node.json && vite build",
+    "preview": "vite preview",
+    "serve": "npm run build && vite preview",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "vectors": "node --import tsx tests/extract_vectors.mjs > tests/vectors.json && node tests/dump_qr.mjs > tests/qr-vectors.json",
+    "test:parity": "npm run vectors && python3 tests/test_parity.py && python3 tests/test_qr.py",
+    "test:loopback": "node --import tsx tests/loopback.mjs",
+    "test:decode": "node --import tsx tests/decodability.mjs",
+    "test:all": "npm test && npm run test:parity && npm run test:loopback && npm run test:decode"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.5",
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
+    "qrcode": "^1.5.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "zxing-wasm": "^2.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "esbuild@0.25.12": true
+  }
+}

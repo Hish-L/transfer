@@ -1,0 +1,22 @@
+{
+  // Typechecks the node-context code the main tsconfig doesn't reach: the build
+  // plugins and vite.config.ts. DOM stays in lib because those import shared/
+  // modules that use web APIs — which node >= 18 actually has.
+  //
+  // tests/ is deliberately out: the files import with explicit .ts extensions
+  // because that is what the tsx test runner resolves, and teaching this config
+  // to accept that would mean accepting it for src too. `npm test` runs them.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["build", "vite.config.ts"]
+}

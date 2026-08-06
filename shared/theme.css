@@ -1,0 +1,622 @@
+/* ---------------------------------------------------------------------------
+   Phosphor. Everything is monospace, hairline rules, and one accent colour.
+   Density does the work that decoration usually does — the accent is reserved
+   for values that are actually live, so a glowing number always means motion.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --bg: #050607;
+  --bg-1: #0b0d0e;
+  --bg-2: #111517;
+  --line: #1a1f22;
+  --line-hot: #242c2f;
+
+  --fg: #c8d2cc;
+  --fg-dim: #6b7a72;
+  --fg-faint: #3d4844;
+
+  --accent: #00ff9c;
+  --accent-dim: #00b36e;
+  --accent-glow: rgb(0 255 156 / 0.14);
+  --warn: #ffb000;
+  --err: #ff3b3b;
+
+  --mono: ui-monospace, "JetBrains Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  --gap: 1rem;
+  --rule: 1px solid var(--line);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Safari 26 samples the page for its chrome tinting and latches the result; a
+   transparent root samples as white and stays white. */
+html {
+  background-color: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+/* The scanline wash. Fixed, non-interactive, and very faint — at 0.045 it
+   reads as texture on an OLED phone and is invisible on a bad projector,
+   which is the right way round. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.045) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ---- layout ------------------------------------------------------------- */
+
+.wrap {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 4rem;
+}
+
+header.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: var(--rule);
+}
+
+.wordmark {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.wordmark a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+.masthead nav {
+  margin-left: auto;
+  display: flex;
+  gap: 1rem;
+}
+
+h2 {
+  margin: 2.25rem 0 0.75rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+h2::before {
+  content: "// ";
+  color: var(--fg-faint);
+}
+
+p {
+  margin: 0 0 0.75rem;
+  max-width: 62ch;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-color: var(--accent-dim);
+}
+
+a:hover {
+  background: var(--accent-glow);
+}
+
+code,
+kbd {
+  font-family: inherit;
+  color: var(--accent);
+}
+
+.dim {
+  color: var(--fg-dim);
+}
+
+hr {
+  border: 0;
+  border-top: var(--rule);
+  margin: 2rem 0;
+}
+
+/* ---- the two big entry tiles on the landing page ------------------------ */
+
+.modes {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  background: var(--line);
+  border: var(--rule);
+  margin-top: 1.5rem;
+}
+
+.mode {
+  display: block;
+  padding: 1.5rem 1.25rem;
+  background: var(--bg-1);
+  color: inherit;
+  text-decoration: none;
+}
+
+.mode:hover,
+.mode:focus-visible {
+  background: var(--bg-2);
+  outline: none;
+}
+
+.mode .glyph {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.mode .name {
+  display: block;
+  margin: 0.75rem 0 0.25rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.mode .what {
+  display: block;
+  color: var(--fg-dim);
+  max-width: 30ch;
+}
+
+/* ---- generic controls --------------------------------------------------- */
+
+button,
+select,
+input[type="file"],
+input[type="range"],
+textarea {
+  font-family: inherit;
+  /* 16px floor: mobile Safari zooms the viewport on focus of anything smaller,
+     and the receiver's viewport meta deliberately has no maximum-scale. */
+  font-size: 16px;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  background: var(--bg-2);
+  color: var(--fg);
+  border: 1px solid var(--line-hot);
+  border-radius: 0;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+button:disabled {
+  color: var(--fg-faint);
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #04120c;
+  font-weight: 700;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #6cffc4;
+  border-color: #6cffc4;
+  color: #04120c;
+}
+
+select {
+  padding: 0.35rem 0.5rem;
+  background: var(--bg-2);
+  color: var(--fg);
+  border: 1px solid var(--line-hot);
+  border-radius: 0;
+}
+
+textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.6rem;
+  background: var(--bg-1);
+  color: var(--fg);
+  border: var(--rule);
+  border-radius: 0;
+  resize: vertical;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+  width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Any rule that sets `display` needs this companion, or the `hidden` attribute
+   silently stops working on that element. */
+[hidden] {
+  display: none !important;
+}
+
+/* ---- status line -------------------------------------------------------- */
+
+.status-line {
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid var(--line-hot);
+  color: var(--fg-dim);
+  min-height: 2.2rem;
+}
+
+.status-line::after {
+  content: "\2588";
+  color: var(--accent);
+  animation: blink 1.1s step-end infinite;
+  margin-left: 0.35ch;
+}
+
+.status-line.error {
+  border-left-color: var(--err);
+  color: var(--err);
+}
+
+.status-line.error::after {
+  content: "";
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---- settings ----------------------------------------------------------- */
+
+.settings {
+  margin-top: 1.5rem;
+  border: var(--rule);
+  background: var(--bg-1);
+}
+
+.settings > summary {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: var(--fg-dim);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.settings > summary:hover {
+  color: var(--accent);
+}
+
+.settings-body {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  padding: 0.9rem 0.75rem;
+  border-top: var(--rule);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field > span {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.settings-note {
+  grid-column: 1 / -1;
+  color: var(--fg-dim);
+  border-top: var(--rule);
+  padding-top: 0.6rem;
+  margin: 0;
+}
+
+/* ---- metric grid -------------------------------------------------------- */
+
+.metrics {
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  background: var(--line);
+  border: var(--rule);
+}
+
+.metric {
+  padding: 0.5rem 0.6rem;
+  background: var(--bg-1);
+}
+
+.metric .k {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.metric .v {
+  font-size: 17px;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.metric .v.hot {
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.metric .v.amber {
+  color: var(--warn);
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin-top: 0.35rem;
+  background: var(--bg);
+}
+
+/* ---- sender ------------------------------------------------------------- */
+
+.stage {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+#qr {
+  display: block;
+  margin: 0 auto;
+  background: #fff;
+  image-rendering: pixelated;
+}
+
+.stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* Fullscreen is a page STATE, never an overlay element. Safari 26 samples a
+   fixed layer for its chrome tint and latches it, so every overlay variant
+   leaves white bands behind after it closes; a flow layout that simply reflows
+   on exit leaves nothing to latch. */
+body.qr-full .wrap > *:not(.stage),
+body.qr-full .stage > *:not(#qr) {
+  display: none;
+}
+
+body.qr-full {
+  background: #fff;
+}
+
+body.qr-full::after {
+  display: none;
+}
+
+body.qr-full .wrap {
+  max-width: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+body.qr-full .stage {
+  margin: 0;
+}
+
+/* ---- receiver ----------------------------------------------------------- */
+
+.viewport {
+  position: relative;
+  margin-top: 1.5rem;
+  border: var(--rule);
+  background: #000;
+  overflow: hidden;
+}
+
+#video {
+  display: block;
+  width: 100%;
+  max-height: 68dvh;
+  object-fit: contain;
+  background: #000;
+}
+
+.hud {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.6rem 0.75rem;
+  background: linear-gradient(to top, rgb(5 6 7 / 0.92), rgb(5 6 7 / 0));
+}
+
+.hud-labels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+#progress-label {
+  color: var(--accent);
+}
+
+#eta-label {
+  color: var(--fg-dim);
+}
+
+.track {
+  height: 3px;
+  background: var(--line-hot);
+}
+
+.track > .bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  transition: width 0.2s linear;
+}
+
+.track > .bar.error {
+  background: var(--err);
+  box-shadow: none;
+}
+
+.hint {
+  border: 1px solid var(--warn);
+  border-left-width: 2px;
+  background: var(--bg-1);
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.hint h3 {
+  margin: 0 0 0.4rem;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+
+.hint ul {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+  color: var(--fg-dim);
+}
+
+.result {
+  margin-top: 1.5rem;
+  border: var(--rule);
+  border-left: 2px solid var(--accent);
+  background: var(--bg-1);
+  padding: 1rem;
+}
+
+.result.failed {
+  border-left-color: var(--err);
+}
+
+.result h3 {
+  margin: 0 0 0.5rem;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.result.failed h3 {
+  color: var(--err);
+}
+
+.result pre {
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.6rem;
+  background: var(--bg);
+  border: var(--rule);
+  white-space: pre-wrap;
+}
+
+.result img,
+.result video {
+  max-width: 100%;
+  margin-top: 0.75rem;
+  border: var(--rule);
+}
+
+/* ---- the terminal one-liner -------------------------------------------- */
+
+.oneliner {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  background: var(--line);
+  border: var(--rule);
+  margin: 0.75rem 0;
+}
+
+.oneliner > code {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-1);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.oneliner > button {
+  border: 0;
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
