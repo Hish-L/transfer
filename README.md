@@ -1,4 +1,4 @@
-# transfer — files over light
+# flight — files over light
 
 Move a file between two devices using nothing but a screen and a camera. One
 screen displays the file as an endless stream of animated QR codes; the other
@@ -20,13 +20,12 @@ and point it at your terminal. macOS and Linux; python3 is the only requirement.
 
 ## How it works
 
-A camera pointed at a screen is a **one-way link**. The receiver has no way to
-ask for a frame it missed, so the sender never waits to be asked: it emits an
-endless stream of **fountain-coded** frames (LT codes, robust soliton
-distribution), each a pseudorandom XOR of the file's blocks. The receiver
-rebuilds the file from any sufficient set of distinct frames, in any order —
-roughly k·1.15 to k·1.4 of them depending on size. Dropped, blurred, duplicated
-and out-of-order frames cost time and nothing else.
+A camera pointed at a screen is a **one-way link**, so the sender never waits
+to be asked: it emits an endless stream of **fountain-coded** frames (LT
+codes, robust soliton distribution), each a pseudorandom XOR of the file's
+blocks. The receiver rebuilds the file from any sufficient set of distinct
+frames, in any order — roughly k·1.15 to k·1.4 of them. Dropped, blurred,
+duplicated and out-of-order frames just cost time.
 
 ```
 file ─→ SHA-256 ─┐
@@ -72,9 +71,8 @@ qr --selftest                 check your terminal, font and camera in 10 seconds
 qr --help                     everything else
 ```
 
-It prints a preflight summary before it starts drawing, and loops forever —
-stop it yourself once the receiver says the file is verified. The sender has no
-way to know.
+It prints a preflight summary, then loops forever — stop it yourself once the
+receiver says the file is verified; the sender has no way to know.
 
 ```
   send        report.pdf            4.7 MB   application/pdf
@@ -99,8 +97,36 @@ spend ten minutes wondering why nothing reads:
 - terminal **background transparency, background images, or window blur** — the
   camera sees your wallpaper mixed into the code;
 - "dim" or "faint" text rendering;
-- a font that draws the half-block characters with seams. Use `--render full`
-  if you hit that: ASCII-only, half the density, always works.
+- a terminal that draws the half-block characters with seams.
+
+That last one is why **macOS Terminal.app gets `--render full` automatically**.
+The dense mode packs two module rows into every text row using `▀`/`▄`, which
+only tiles if the terminal fills the character cell with them — Windows
+Terminal, iTerm2, kitty, WezTerm and Ghostty all synthesise the block elements
+themselves and are pixel-exact. Terminal.app renders them as font outlines
+instead: antialiased, not spanning the line height, leaving a hairline of
+background between each pair of module rows. It still looks fine to a human
+and still will not decode.
+
+`--render full` paints each module as a background colour behind a space, so it
+depends on no font at all and cannot seam. Pass `--render half` to force the
+dense mode anyway if your terminal tiles the blocks cleanly.
+
+**It will look like a much smaller code, and the fix is your font size.** A
+module has to stay square — a decoder rejects stretched ones — so `--render
+full` spends two cells across and one down where the dense mode spends one
+across and half a one down. That is 4x the character cells for the same code,
+which at a fixed window means half the modules per side:
+
+| terminal | `--render half` | `--render full` |
+|---|---|---|
+| 120x30 | V7, 154 B/frame | nothing fits |
+| 200x50 | V17, 644 B/frame | V5, 106 B/frame |
+| 240x60 | V22, 1003 B/frame | V8, 192 B/frame |
+
+Halving the font size gets all of it back, and gives a physically identical
+code: what the camera sees is the module's size on screen, not how many
+character cells were spent drawing it.
 
 Default frame rate is 12, not 60 like the web sender. A canvas blit is free and
 a 17 KB terminal repaint is not, a 30 fps camera wants each frame held for at
@@ -109,15 +135,9 @@ least two capture intervals, and Terminal.app tears above about 15.
 ## On `curl | bash`
 
 `qr.sh` fetches `qrsend.py`, checks it against a SHA-256 pinned at build time,
-caches it under `~/.cache/qrtransfer`, and hands over. A warm cache means no
-network at all.
-
-Be clear about what that pin buys: both files come from the same origin over
-the same connection, so it is **integrity against a truncated or corrupted
-download**, plus a payload identity you can audit against the published
-release. It is **not** protection from a compromised origin. Piping a URL into
-a shell is trust-on-first-use of that origin, and no hash inside the pipe
-changes that.
+caches it under `~/.cache/qrtransfer`, and hands over. That pin catches a
+truncated or corrupted download — it's **not** protection from a compromised
+origin. Piping a URL into a shell is trust-on-first-use of that origin.
 
 If you would rather look first:
 

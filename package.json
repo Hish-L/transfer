@@ -1,9 +1,9 @@
 {
-  "name": "transfer",
+  "name": "flight",
   "private": true,
   "version": "0.1.0",
   "license": "MIT",
-  "description": "Airgapped file transfer over animated, fountain-coded QR codes — screen to camera, no network.",
+  "description": "Files over light — airgapped file transfer over animated QR codes, screen to camera, no network.",
   "type": "module",
   "scripts": {
     "dev": "vite",

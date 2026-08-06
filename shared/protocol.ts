@@ -109,7 +109,7 @@ function safeFileName(name: string): string {
   // Strip control characters (NUL and newlines in particular) and the
   // relative-path names that survive a basename split.
   const cleaned = base.replace(/[\u0000-\u001f\u007f]/g, "").trim();
-  return cleaned === "" || cleaned === "." || cleaned === ".." ? "transfer.bin" : cleaned;
+  return cleaned === "" || cleaned === "." || cleaned === ".." ? "flight.bin" : cleaned;
 }
 
 /** Media types whose bytes are already entropy-coded, keyed by exact subtype. */

@@ -1,11 +1,11 @@
 // The landing page is static apart from one affordance: the terminal
-// one-liner is the thing people came for, and selecting it by hand out of a
+// one-liners are the thing people came for, and selecting one by hand out of a
 // horizontally-scrolling <code> on a phone is miserable.
 
-const cmd = document.getElementById("cli-cmd");
-const copy = document.getElementById("cli-copy") as HTMLButtonElement | null;
+for (const copy of document.querySelectorAll<HTMLButtonElement>("button[data-copy]")) {
+  const cmd = document.getElementById(copy.dataset.copy ?? "");
+  if (!cmd) continue;
 
-if (cmd && copy) {
   copy.addEventListener("click", () => {
     void navigator.clipboard
       ?.writeText(cmd.textContent ?? "")

@@ -76,7 +76,7 @@ test("the receiver sanitises the filename rather than trusting the sender", asyn
 test("filenames that sanitise away fall back to a safe default", async () => {
   for (const sent of ["..", ".", "/", "   ", "\u0000\u0007"]) {
     const packed = await packFile(sent, "application/octet-stream", new Uint8Array([1]));
-    assert.equal((await unpackFile(packed.container)).name, "transfer.bin");
+    assert.equal((await unpackFile(packed.container)).name, "flight.bin");
   }
 });
 

@@ -21,6 +21,7 @@ import atexit
 import bisect
 import gzip
 import hashlib
+from itertools import groupby
 import math
 import mimetypes
 import os
@@ -286,7 +287,7 @@ def is_precompressed_type(media_type: str) -> bool:
 def safe_file_name(name: str) -> str:
     base = name.replace("\\", "/").split("/")[-1]
     base = "".join(c for c in base if not (ord(c) < 0x20 or ord(c) == 0x7F)).strip()
-    return base or "transfer.bin"
+    return base or "flight.bin"
 
 
 def guess_media_type(path: str) -> str:
@@ -810,6 +811,17 @@ _BASIC = "\x1b[30;47m"
 _BASIC_INV = "\x1b[37;40m"
 _RESET = "\x1b[0m"
 
+# Background-only fills, as (light, dark). A space has no glyph, and a terminal
+# paints the whole cell rect with the background colour before it draws
+# anything into it — so these tile exactly, on any font, at any line height.
+# That is the entire point: the half-blocks above are at the mercy of whether
+# the terminal synthesises U+2580/U+2584 itself (Windows Terminal, iTerm2,
+# kitty, WezTerm, Ghostty all do) or renders them as font outlines and leaves a
+# seam between every pair of module rows (Terminal.app).
+_BG_TRUECOLOR = ("\x1b[48;2;255;255;255m", "\x1b[48;2;0;0;0m")
+_BG_256 = ("\x1b[48;5;231m", "\x1b[48;5;16m")
+_BG_BASIC = ("\x1b[47m", "\x1b[40m")
+
 ALT_SCREEN_ON = "\x1b[?1049h"
 ALT_SCREEN_OFF = "\x1b[?1049l"
 CURSOR_HIDE = "\x1b[?25l"
@@ -831,6 +843,20 @@ def terminal_name() -> str:
         if os.environ.get(var):
             return os.environ[var]
     return os.environ.get("TERM", "unknown")
+
+
+def half_blocks_tile() -> bool:
+    """Whether this terminal draws U+2580/U+2584 as exact half-cell fills.
+
+    Most modern terminals synthesise the block elements themselves, so the
+    glyphs tile perfectly whatever the font. Terminal.app renders them as font
+    outlines instead: they are antialiased, they do not span the line height,
+    and every pair of module rows ends up separated by a hairline of
+    background. The code still *looks* fine to a human and still fails to
+    decode, which is the worst way for this to go wrong — so it is detected
+    rather than left for the user to discover.
+    """
+    return os.environ.get("TERM_PROGRAM", "") != "Apple_Terminal"
 
 
 def utf8_capable() -> bool:
@@ -967,6 +993,11 @@ class Renderer:
         else:
             self.on = _BASIC_INV if invert else _BASIC
             self.off = _RESET
+        light, dark = {"truecolor": _BG_TRUECOLOR, "256": _BG_256}.get(support, _BG_BASIC)
+        self.bg_light, self.bg_dark = (dark, light) if invert else (light, dark)
+        # Background fills need colour. Without it the only thing left to carry
+        # a module is the glyph itself, which is the ASCII path below.
+        self.bg_fill = not half_blocks and color
 
     def cells(self, modules_per_side: int) -> tuple[int, int]:
         """(columns, rows) the rendered code occupies."""
@@ -997,15 +1028,25 @@ class Renderer:
                 codes = bytes(map(int.__or__, top.translate(_DOUBLE), bottom))
                 text = codes.decode("latin-1").translate(_GLYPHS)
                 out.append(f"{pad}{self.on}{text}{self.off}")
-        else:
-            # Two spaces per module, ASCII only. Half the density, but it
-            # survives a terminal whose font renders the half-blocks with
-            # seams, and a locale that cannot encode them at all.
+        elif self.bg_fill:
+            # Two spaces per module, drawn entirely in background colour. Half
+            # the density of the half-blocks, and worth it wherever the glyphs
+            # cannot be trusted: nothing here depends on a font at all.
+            # Runs are coalesced because a colour change per module would be
+            # ~12 bytes each, and the repaint cost is what caps the frame rate.
             for row in rows:
-                text = "".join("  " if not v else "██" for v in row)
-                if not self.on:
-                    text = "".join("  " if not v else "##" for v in row)
-                out.append(f"{pad}{self.on}{text}{self.off}")
+                parts = [pad]
+                for value, run in groupby(row):
+                    parts.append(self.bg_dark if value else self.bg_light)
+                    parts.append("  " * len(list(run)))
+                parts.append(_RESET)
+                out.append("".join(parts))
+        else:
+            # No colour at all, so the glyph is the only thing left to carry a
+            # module. ASCII-only, and it also survives a locale that cannot
+            # encode the half-blocks.
+            for row in rows:
+                out.append(f"{pad}{''.join('  ' if not v else '##' for v in row)}")
         return out
 
 
@@ -1236,8 +1277,17 @@ making it readable:
   into the code. So does "dim" or "faint" text rendering. Use an opaque
   profile.
 
-  If the half-block characters render with seams in your font, pass
-  --render full: it is ASCII-only and half the density, but it always works.
+  The dense mode packs two module rows into each text row using the half-block
+  characters, which only works if your terminal fills the cell with them.
+  Terminal.app does not — it draws them from the font and leaves seams — so it
+  gets --render full automatically. That mode paints every module as a
+  background colour behind a space, so it depends on no font at all.
+
+  A module has to stay square, so --render full spends two cells across and one
+  down where the dense mode spends one across and half a one down: 4x the cells
+  for the same code. Halve your font size and you get the identical physical
+  code back, because a module's size on screen is what the camera sees, not the
+  number of cells drawing it.
 
 this is not encrypted:
   Whatever is on this screen is readable by any camera pointed at it. The
@@ -1272,8 +1322,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-cols", type=int, metavar="N", help="cap the code's width")
     p.add_argument("--max-rows", type=int, metavar="N", help="cap the code's height")
 
-    p.add_argument("--render", choices=("half", "full"), default="half",
-                   help="half-block (dense) or two-column ASCII (default: half)")
+    p.add_argument("--render", choices=("half", "full"), default=None,
+                   help="half-block (dense) or two-column colour fill "
+                        "(default: half, except where the terminal is known "
+                        "to draw the half-blocks with seams)")
     p.add_argument("--invert", action="store_true", help="light modules on dark")
     p.add_argument("--no-color", action="store_true",
                    help="use the terminal's own colours (usually undecodable)")
@@ -1303,7 +1355,7 @@ def load_payload(args) -> tuple[Packed, bool]:
     """Returns (packed, is_text)."""
     if args.selftest:
         text = (
-            "transfer selftest — if you can read this on the other device, your "
+            "flight selftest — if you can read this on the other device, your "
             "terminal, font and camera are all good.\n"
         )
         return pack_file(SNIPPET_FILE_NAME, SNIPPET_MEDIA_TYPE,
@@ -1403,7 +1455,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_rows:
         term_rows = min(term_rows, args.max_rows)
 
-    half = args.render == "half"
+    half = args.render != "full"
     if half and not utf8_capable():
         # The half-blocks cannot be encoded at all under a non-UTF-8 locale,
         # and a UnicodeEncodeError three frames in is a worse outcome than
@@ -1411,6 +1463,22 @@ def main(argv: list[str] | None = None) -> int:
         half = False
         if not args.quiet:
             print("note: this locale is not UTF-8, so --render full is being used.",
+                  file=sys.stderr)
+    elif half and args.render is None and not half_blocks_tile():
+        # Not a preference — on these terminals the half-blocks simply do not
+        # decode, so defaulting to a dense code that cannot be read is the
+        # wrong trade. Explicit --render half still wins, because a different
+        # font or line height may well tile fine.
+        half = False
+        if not args.quiet:
+            print(f"note: {terminal_name()} draws the half-block characters from the font "
+                  "rather than\n"
+                  "      filling the cell, so every pair of module rows is separated by a\n"
+                  "      seam a decoder cannot read through. Using --render full.\n"
+                  "      It spends 4x the character cells on the same code, so HALVE YOUR\n"
+                  "      FONT SIZE to get the same physical code back. Or use a terminal\n"
+                  "      that draws the block characters itself (iTerm2, Ghostty, kitty,\n"
+                  "      WezTerm) and pass --render half.",
                   file=sys.stderr)
     renderer = Renderer(half_blocks=half, invert=args.invert,
                         color=not args.no_color, columns=term_cols)

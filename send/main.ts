@@ -16,6 +16,11 @@ import {
 } from "../shared/frame-capacity";
 import { fnv1a, packFile, packFrame, type CompressionMode } from "../shared/protocol";
 import { rasterizeQr } from "../shared/qr-raster";
+import {
+  MAX_FRAME_BYTES_BY_ECC,
+  largestFrameBytesFor,
+  type Ecc,
+} from "../shared/send-settings";
 import { MAX_SNIPPET_BYTES, MAX_SNIPPET_LABEL, packSnippet } from "../shared/snippet";
 import { statusLine } from "../shared/status-line";
 import { requestScreenWakeLock } from "../shared/wake-lock";
@@ -37,7 +42,8 @@ const fullBtn = el<HTMLButtonElement>("full");
 const exitFullBtn = el<HTMLButtonElement>("exit-full");
 const stage = el<HTMLDivElement>("stage");
 const canvas = el<HTMLCanvasElement>("qr");
-const specsHeading = el<HTMLElement>("specs-heading");
+const uploadName = el<HTMLElement>("upload-name");
+const stageChrome = el<HTMLDivElement>("stage-chrome");
 const specs = el<HTMLDivElement>("stream-specs");
 const status = statusLine(el<HTMLElement>("status"));
 
@@ -49,6 +55,8 @@ const staging = document.createElement("canvas");
  *  generation returns instead of fighting the new stream for the canvas. */
 let generation = 0;
 let streaming = false;
+/** When the modal last opened, on the same clock as Event.timeStamp. */
+let openedAt = 0;
 
 interface Source {
   name: string;
@@ -75,6 +83,7 @@ cfgFile.addEventListener("change", () => {
   source = undefined;
   setControls();
   const file = cfgFile.files?.[0];
+  uploadName.textContent = file ? file.name : "Choose a file";
   status.setStatus(
     file ? `${file.name} — ${formatBytes(file.size)}, ready` : "pick a file, or paste some text",
   );
@@ -84,6 +93,7 @@ cfgText.addEventListener("input", () => {
   if (cfgText.value.trim()) cfgFile.value = "";
   source = undefined;
   setControls();
+  uploadName.textContent = "Choose a file";
   const bytes = new TextEncoder().encode(cfgText.value).length;
   status.setStatus(
     bytes === 0
@@ -128,6 +138,11 @@ async function prepare(): Promise<Source> {
 
 function layout(moduleTotal: number): number {
   const dpr = window.devicePixelRatio || 1;
+  // In the modal the metrics, hint and buttons sit under the code, so the
+  // height it may claim is the viewport minus that chrome — otherwise the
+  // controls end up below the fold and the only way to stop is a blind click.
+  // The constant is the .wrap padding plus the flex gap above the chrome.
+  const chrome = stageChrome.offsetHeight + 48;
   const cssBudget = document.body.classList.contains("qr-full")
     ? Math.min(window.innerWidth, window.innerHeight)
     : fitQrDisplaySize(
@@ -135,6 +150,8 @@ function layout(moduleTotal: number): number {
         window.innerHeight,
         stage.clientWidth || window.innerWidth,
         Number(cfgSize.value),
+        0,
+        chrome,
       );
   // Floor to an integer so no module is resampled across a pixel boundary —
   // a half-pixel of blur is the difference between a code that reads at arm's
@@ -165,7 +182,7 @@ async function startStream(): Promise<void> {
 
   const frameBytes = Number(cfgBytes.value);
   const txFps = Number(cfgFps.value);
-  const ecc = cfgEcc.value as "L" | "M" | "Q" | "H";
+  const ecc = cfgEcc.value as Ecc;
   const payload = packed.container;
 
   // k is a u16, so the real ceiling is a function of frame size, not of
@@ -218,8 +235,9 @@ async function startStream(): Promise<void> {
       // change physical size mid-stream and every camera would have to refind
       // and refocus it.
       version = qr.version;
-      layout(qr.modules.size + 2 * MARGIN);
-      specsHeading.hidden = false;
+      // Fill and reveal the metrics BEFORE laying out: they are part of the
+      // chrome layout() measures, and a hidden grid measures 0 — which would
+      // hand the code the height the metrics are about to occupy.
       specs.hidden = false;
       el("spec-fps").textContent = `${txFps} fps`;
       el("spec-frame").textContent = `${frameBytes} bytes`;
@@ -228,6 +246,7 @@ async function startStream(): Promise<void> {
       el("spec-compression").textContent =
         packed.compression === "gzip" ? `gzip → ${formatBytes(packed.transmittedSize)}` : "none";
       el("spec-payload").textContent = `${packed.name} · ${formatBytes(packed.size)}`;
+      layout(qr.modules.size + 2 * MARGIN);
     }
     const raster = rasterizeQr(qr.modules.size, qr.modules.data, MARGIN);
     return new ImageData(new Uint8ClampedArray(raster.pixels.buffer), raster.size, raster.size);
@@ -253,13 +272,16 @@ async function startStream(): Promise<void> {
   // stage.clientWidth, and a hidden element measures 0 — which would collapse
   // the display budget and render the whole stream at one pixel per module.
   stage.hidden = false;
+  document.body.classList.add("stage-open");
   pump();
   if (generatorFailed) {
     stage.hidden = true;
+    document.body.classList.remove("stage-open");
     return;
   }
 
   streaming = true;
+  openedAt = performance.now();
   setControls();
   status.setStatus(
     `streaming ${packed.name} — ${encoder.k.toLocaleString()} blocks at ${txFps} fps · ` +
@@ -307,7 +329,7 @@ function stopStream(): void {
   generation++;
   streaming = false;
   stage.hidden = true;
-  document.body.classList.remove("qr-full");
+  document.body.classList.remove("stage-open", "qr-full");
   exitFullBtn.hidden = true;
   setControls();
   status.setStatus("stopped");
@@ -318,11 +340,33 @@ function stopStream(): void {
 startBtn.addEventListener("click", () => void startStream());
 stopBtn.addEventListener("click", stopStream);
 
-for (const control of [cfgFps, cfgBytes, cfgEcc]) {
+for (const control of [cfgFps, cfgBytes]) {
   control.addEventListener("change", () => {
     if (streaming) void startStream();
   });
 }
+
+/**
+ * A stream pins one QR version for its whole life, and the largest version
+ * there is holds far less at a strong ECC than at a weak one — 1273 bytes at
+ * H against 2953 at L. The bytes/frame list was written against L, so raising
+ * the ECC without pruning it offers frame sizes that cannot be encoded at any
+ * size, and the stream dies on its first frame.
+ */
+function constrainFrameBytesToEcc(): void {
+  const cap = MAX_FRAME_BYTES_BY_ECC[cfgEcc.value as Ecc];
+  for (const option of cfgBytes.options) option.disabled = Number(option.value) > cap;
+  if (Number(cfgBytes.value) > cap) cfgBytes.value = String(largestFrameBytesFor(cfgEcc.value as Ecc));
+}
+
+cfgEcc.addEventListener("change", () => {
+  const before = cfgBytes.value;
+  constrainFrameBytesToEcc();
+  if (streaming) void startStream();
+  else if (cfgBytes.value !== before) {
+    status.setStatus(`ECC ${cfgEcc.value} caps frames at ${cfgBytes.value} bytes — adjusted`);
+  }
+});
 // Size is display-only: it never changes a byte on the wire, so it refits
 // rather than restarting the stream.
 cfgSize.addEventListener("input", () => {
@@ -345,4 +389,22 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.body.classList.contains("qr-full")) leaveFull();
 });
 
+// The modal is a page state, not a dialog element, so "click outside" is a
+// plain document listener: any click that lands outside .stage while
+// streaming — but not during true fullscreen, where the whole viewport is
+// the code and an accidental tap should not kill the stream — stops it.
+document.addEventListener("click", (e) => {
+  if (!streaming || document.body.classList.contains("qr-full")) return;
+  // Ignore the click that opened the modal, which is still bubbling. On a
+  // restart prepare() finds the source already packed and returns without
+  // ever suspending on real work, so startStream() runs all the way to
+  // `streaming = true` in the microtask checkpoint between the start
+  // button's listener and this one — and the start button is, of course,
+  // outside .stage. Without this the stream would stop on the very click
+  // that started it, but only ever on the second and later starts.
+  if (e.timeStamp <= openedAt) return;
+  if (!stage.contains(e.target as Node)) stopStream();
+});
+
+constrainFrameBytesToEcc();
 setControls();

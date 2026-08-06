@@ -137,10 +137,6 @@ async function start(): Promise<void> {
     }
   }
 
-  video.srcObject = stream;
-  video.muted = true;
-  await video.play().catch(() => undefined);
-
   done = false;
   decoder = undefined;
   header = undefined;
@@ -151,11 +147,24 @@ async function start(): Promise<void> {
   resultEl.hidden = true;
   bar.classList.remove("error");
   bar.style.width = "0%";
+  // Before srcObject, not after: `hidden` is `display: none !important`, and
+  // WebKit will not start a display:none video. play() rejects (or resolves
+  // having presented nothing), rVFC then never fires, and the capture chain is
+  // dead for good — the camera is live but the page sits at 0 capture fps.
   viewport.hidden = false;
   startBtn.disabled = true;
   stopBtn.disabled = false;
   diagnostics.open = true;
   diagnosticsSummary.textContent = "Live diagnostics";
+
+  video.srcObject = stream;
+  video.muted = true;
+  video.playsInline = true;
+  if (!(await startPlayback())) {
+    stop();
+    status.showError("the camera stream would not start playing. Press start again.");
+    return;
+  }
 
   pool.resize(Number(cfgWorkers.value));
   reportCamera();
@@ -168,6 +177,43 @@ async function start(): Promise<void> {
   noSignal.cameraStarted(performance.now());
   statsTimer = window.setInterval(updateStats, STATS_TICK_MS);
   scheduleFrame(++captureGen);
+}
+
+/** Play the preview and wait until it is genuinely producing frames.
+ *
+ *  `play()` resolving is not the same fact as "there are frames": iOS can
+ *  resolve it with videoWidth still 0, and the capture loop reads videoWidth on
+ *  every frame. So gate on dimensions, and retry once — the first play attempt
+ *  after a fresh permission grant loses a race with layout often enough to be
+ *  the bug people actually hit. */
+async function startPlayback(): Promise<boolean> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await video.play();
+    } catch {
+      // AbortError/NotAllowedError here is worth one more go, not a failure.
+    }
+    if (await waitForFrames(2500)) return true;
+  }
+  return false;
+}
+
+function waitForFrames(timeoutMs: number): Promise<boolean> {
+  if (video.videoWidth > 0) return Promise.resolve(true);
+  return new Promise<boolean>((resolve) => {
+    const settle = (value: boolean): void => {
+      window.clearTimeout(timer);
+      video.removeEventListener("loadedmetadata", onMeta);
+      video.removeEventListener("resize", onMeta);
+      resolve(value);
+    };
+    const onMeta = (): void => {
+      if (video.videoWidth > 0) settle(true);
+    };
+    const timer = window.setTimeout(() => settle(video.videoWidth > 0), timeoutMs);
+    video.addEventListener("loadedmetadata", onMeta);
+    video.addEventListener("resize", onMeta);
+  });
 }
 
 function reportCamera(): void {
@@ -517,6 +563,14 @@ function present(file: OpticalFile, containerLength: number, seconds: number): v
 
 startBtn.addEventListener("click", () => void start());
 stopBtn.addEventListener("click", stop);
+
+// Same dead-chain hazard from the other direction: iOS pauses the preview when
+// the tab is backgrounded (a call, the lock screen, an app switch), and a
+// paused video presents no frames, so the rVFC chain never resumes on its own.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !stream || done) return;
+  void video.play().catch(() => undefined);
+});
 
 for (const control of [cfgWidth, cfgCapFps]) {
   control.addEventListener("change", () => {

@@ -1,30 +1,56 @@
 /* ---------------------------------------------------------------------------
-   Phosphor. Everything is monospace, hairline rules, and one accent colour.
-   Density does the work that decoration usually does — the accent is reserved
-   for values that are actually live, so a glowing number always means motion.
+   Paper by day, ink by night. One warm accent — the light in "files over
+   light" — carries the F in the wordmark, links, and anything actually live.
+   Sans-serif for reading, monospace only where numbers need to line up.
    --------------------------------------------------------------------------- */
 
 :root {
-  --bg: #050607;
-  --bg-1: #0b0d0e;
-  --bg-2: #111517;
-  --line: #1a1f22;
-  --line-hot: #242c2f;
+  --bg: #faf8f5;
+  --bg-1: #f2efe9;
+  --bg-2: #eae6de;
+  --line: #e5e1da;
+  --line-hot: #d6d0c5;
 
-  --fg: #c8d2cc;
-  --fg-dim: #6b7a72;
-  --fg-faint: #3d4844;
+  --fg: #1a1a18;
+  --fg-dim: #7a766e;
+  --fg-faint: #a8a399;
 
-  --accent: #00ff9c;
-  --accent-dim: #00b36e;
-  --accent-glow: rgb(0 255 156 / 0.14);
-  --warn: #ffb000;
-  --err: #ff3b3b;
+  --accent: #c9862c;
+  --accent-dim: #a86f22;
+  --accent-glow: rgb(201 134 44 / 0.14);
+  --accent-ink: #fffaf2;
+  --warn: #b5790f;
+  --err: #c23b2c;
 
+  --sans:
+    ui-sans-serif, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
   --gap: 1rem;
   --rule: 1px solid var(--line);
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17171a;
+    --bg-1: #1e1e21;
+    --bg-2: #26262a;
+    --line: #2c2b2c;
+    --line-hot: #38373a;
+
+    --fg: #e8e6e1;
+    --fg-dim: #96938c;
+    --fg-faint: #5c5a56;
+
+    --accent: #e0a750;
+    --accent-dim: #c78e3c;
+    --accent-glow: rgb(224 167 80 / 0.16);
+    --accent-ink: #1c1608;
+    --warn: #e0a750;
+    --err: #e2685a;
+  }
 }
 
 *,
@@ -47,27 +73,10 @@ body {
     env(safe-area-inset-left);
   background: var(--bg);
   color: var(--fg);
-  font-family: var(--mono);
-  font-size: 14px;
-  line-height: 1.5;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
   overflow-wrap: break-word;
-}
-
-/* The scanline wash. Fixed, non-interactive, and very faint — at 0.045 it
-   reads as texture on an OLED phone and is invisible on a bad projector,
-   which is the right way round. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgb(255 255 255 / 0.045) 0 1px,
-    transparent 1px 3px
-  );
 }
 
 /* ---- layout ------------------------------------------------------------- */
@@ -89,11 +98,10 @@ header.masthead {
 
 .wordmark {
   margin: 0;
-  font-size: 14px;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--accent);
+  letter-spacing: -0.01em;
+  color: var(--fg);
 }
 
 .wordmark a {
@@ -101,9 +109,52 @@ header.masthead {
   text-decoration: none;
 }
 
+.wordmark .f-accent {
+  color: var(--accent);
+}
+
+/* The F grows into "Files over". A 0fr -> 1fr grid track is the one way to
+   transition to a content-derived width without hard-coding it, and it keeps
+   the baseline and the trailing "light" exactly where they were. */
+.f-grow {
+  display: inline-grid;
+  grid-template-columns: 0fr;
+  transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  vertical-align: bottom;
+  /* Say what the F stands for once on arrival, then fold it away and leave it
+     to hover. Deliberately no fill-mode: `forwards` would keep the animation's
+     final value winning over the hover rule for the life of the page, and the
+     wordmark would never open again. */
+  animation: f-reveal 5.5s cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+}
+
+.f-grow > span {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.wordmark:hover .f-grow,
+.wordmark a:focus-visible .f-grow {
+  grid-template-columns: 1fr;
+}
+
+/* 5.5s = 0.7s open, 4s held open, 0.8s closed. */
+@keyframes f-reveal {
+  0%,
+  100% {
+    grid-template-columns: 0fr;
+  }
+  13%,
+  85% {
+    grid-template-columns: 1fr;
+  }
+}
+
 .tagline {
   margin: 0;
   color: var(--fg-dim);
+  font-size: 13px;
 }
 
 .masthead nav {
@@ -112,18 +163,17 @@ header.masthead {
   gap: 1rem;
 }
 
-h2 {
-  margin: 2.25rem 0 0.75rem;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
+.masthead nav a {
+  font-size: 13px;
 }
 
-h2::before {
-  content: "// ";
-  color: var(--fg-faint);
+h2 {
+  margin: 2.25rem 0 0.75rem;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
 }
 
 p {
@@ -143,7 +193,8 @@ a:hover {
 
 code,
 kbd {
-  font-family: inherit;
+  font-family: var(--mono);
+  font-size: 0.92em;
   color: var(--accent);
 }
 
@@ -157,6 +208,178 @@ hr {
   margin: 2rem 0;
 }
 
+/* ---- hero: a code on one screen, a camera on the other ------------------ */
+
+.lead {
+  margin: 1.25rem 0 0;
+  max-width: 44ch;
+  font-size: 17px;
+  color: var(--fg-dim);
+}
+
+.hero {
+  margin: 1.25rem 0 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* The diagram carries the explanation the intro paragraph used to, so the
+   labels are content, not decoration — hence a real accessible name on the
+   svg rather than aria-hidden. */
+.hero text {
+  font-family: var(--sans);
+  fill: var(--fg-dim);
+  text-anchor: middle;
+}
+
+.hero .cap {
+  font-size: 11px;
+}
+
+.hero .gap-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--fg-faint);
+}
+
+.hero svg {
+  width: 100%;
+  max-width: 26rem;
+  height: auto;
+}
+
+.hero .dev {
+  fill: var(--bg-1);
+  stroke: var(--line-hot);
+  stroke-width: 2;
+}
+
+.hero .qr rect {
+  fill: var(--fg);
+  animation: qr-flicker 2.4s steps(1, end) infinite;
+}
+
+/* Only the data modules blink; the three corner squares are the finder
+   pattern and hold still, which is what makes it read as a QR code. */
+.hero .qr rect:nth-child(1),
+.hero .qr rect:nth-child(4),
+.hero .qr rect:nth-child(14) {
+  animation: none;
+}
+
+.hero .qr rect:nth-child(3n) {
+  animation-delay: -0.8s;
+}
+.hero .qr rect:nth-child(3n + 1) {
+  animation-delay: -1.6s;
+}
+
+.hero .beams path {
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  animation: beam 1.8s ease-in-out infinite;
+}
+
+.hero .beams path:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.hero .beams path:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.hero .lens {
+  fill: var(--bg-2);
+  stroke: var(--line-hot);
+  stroke-width: 2;
+}
+
+.hero .lens-eye {
+  fill: var(--accent);
+  animation: lens-pulse 1.8s ease-in-out infinite;
+}
+
+.hero .track {
+  fill: var(--line-hot);
+}
+
+.hero .fill {
+  fill: var(--accent);
+  /* fill-box, so scaleX grows from the bar's own left edge rather than from
+     the origin of the whole view-box. */
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: fill-up 5.4s ease-in-out infinite;
+}
+
+@keyframes qr-flicker {
+  0%,
+  33% {
+    opacity: 1;
+  }
+  34%,
+  66% {
+    opacity: 0.18;
+  }
+  67%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes beam {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  35% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+@keyframes lens-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes fill-up {
+  0% {
+    transform: scaleX(0);
+  }
+  85%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* The global reduced-motion rule freezes the animations; without a resting
+   state the beams would be stuck mid-fade at opacity 0 and the bar at zero. */
+@media (prefers-reduced-motion: reduce) {
+  .hero .beams path,
+  .hero .lens-eye,
+  .hero .qr rect {
+    opacity: 1;
+  }
+
+  .hero .fill {
+    transform: scaleX(0.6);
+  }
+}
+
 /* ---- the two big entry tiles on the landing page ------------------------ */
 
 .modes {
@@ -165,6 +388,8 @@ hr {
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   background: var(--line);
   border: var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
   margin-top: 1.5rem;
 }
 
@@ -174,6 +399,7 @@ hr {
   background: var(--bg-1);
   color: inherit;
   text-decoration: none;
+  transition: background 0.15s ease;
 }
 
 .mode:hover,
@@ -183,7 +409,7 @@ hr {
 }
 
 .mode .glyph {
-  font-size: 26px;
+  font-size: 24px;
   line-height: 1;
   color: var(--accent);
 }
@@ -192,15 +418,89 @@ hr {
   display: block;
   margin: 0.75rem 0 0.25rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent);
+  font-size: 16px;
+  color: var(--fg);
 }
 
 .mode .what {
   display: block;
   color: var(--fg-dim);
   max-width: 30ch;
+  font-size: 13.5px;
+}
+
+/* ---- upload row (file card + text snippet, side by side) ---------------- */
+
+.upload-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  align-items: stretch;
+  margin-top: 1.5rem;
+}
+
+.upload-row .field {
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-row .field textarea {
+  flex: 1;
+  min-height: 7.5rem;
+}
+
+.upload-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 7.5rem;
+  padding: 1rem;
+  border: 1.5px dashed var(--line-hot);
+  border-radius: var(--radius);
+  background: var(--bg-1);
+  color: var(--fg-dim);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.upload-card:hover,
+.upload-card:focus-within {
+  border-color: var(--accent-dim);
+  background: var(--bg-2);
+  color: var(--accent);
+}
+
+.upload-card svg {
+  width: 26px;
+  height: 26px;
+}
+
+.upload-title {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.upload-hint {
+  font-size: 12.5px;
+}
+
+.upload-card input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---- generic controls --------------------------------------------------- */
@@ -217,14 +517,16 @@ textarea {
 }
 
 button {
-  padding: 0.5rem 1rem;
+  padding: 0.55rem 1.1rem;
   background: var(--bg-2);
   color: var(--fg);
   border: 1px solid var(--line-hot);
-  border-radius: 0;
+  border-radius: var(--radius);
   cursor: pointer;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 button:hover:not(:disabled) {
@@ -240,22 +542,22 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #04120c;
+  color: var(--accent-ink);
   font-weight: 700;
 }
 
 button.primary:hover:not(:disabled) {
-  background: #6cffc4;
-  border-color: #6cffc4;
-  color: #04120c;
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: var(--accent-ink);
 }
 
 select {
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.55rem;
   background: var(--bg-2);
   color: var(--fg);
   border: 1px solid var(--line-hot);
-  border-radius: 0;
+  border-radius: var(--radius);
 }
 
 textarea {
@@ -265,7 +567,7 @@ textarea {
   background: var(--bg-1);
   color: var(--fg);
   border: var(--rule);
-  border-radius: 0;
+  border-radius: var(--radius);
   resize: vertical;
 }
 
@@ -291,6 +593,8 @@ input[type="range"] {
   margin-top: 1rem;
   padding: 0.5rem 0.75rem;
   border-left: 2px solid var(--line-hot);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--bg-1);
   color: var(--fg-dim);
   min-height: 2.2rem;
 }
@@ -322,20 +626,28 @@ input[type="range"] {
 .settings {
   margin-top: 1.5rem;
   border: var(--rule);
+  border-radius: var(--radius);
   background: var(--bg-1);
+  overflow: hidden;
 }
 
 .settings > summary {
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.85rem;
   cursor: pointer;
   color: var(--fg-dim);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-size: 11px;
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .settings > summary:hover {
   color: var(--accent);
+}
+
+.settings-title {
+  padding: 0.6rem 0.85rem;
+  color: var(--fg-dim);
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .settings-body {
@@ -353,9 +665,8 @@ input[type="range"] {
 }
 
 .field > span {
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--fg-dim);
 }
 
@@ -375,6 +686,8 @@ input[type="range"] {
   grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   background: var(--line);
   border: var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .metric {
@@ -383,15 +696,14 @@ input[type="range"] {
 }
 
 .metric .k {
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 11px;
   color: var(--fg-dim);
   white-space: nowrap;
 }
 
 .metric .v {
-  font-size: 17px;
+  font-family: var(--mono);
+  font-size: 16px;
   color: var(--fg);
   white-space: nowrap;
 }
@@ -413,18 +725,54 @@ input[type="range"] {
   background: var(--bg);
 }
 
-/* ---- sender ------------------------------------------------------------- */
+/* ---- sender: streaming stage as an overlay modal -------------------------
+   The overlay is a page STATE (a body class that reflows .wrap to fill the
+   viewport and hides its other children), never `position: fixed`. Safari 26
+   samples a fixed layer for its chrome tint and latches the result, leaving
+   white bands behind after it closes; a flow layout that simply reflows on
+   exit leaves nothing to latch. This is the same technique qr-full below
+   already relies on. */
 
+/* width:100% is load-bearing, not cosmetic: layout() sizes the code against
+   stage.clientWidth, and a flex item left at its automatic width shrink-wraps
+   the 1x1 canvas of the first frame — which collapses the display budget and
+   renders the whole stream postage-stamp sized. */
 .stage {
-  margin-top: 1.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
   text-align: center;
+}
+
+.stage-chrome {
+  width: 100%;
+  max-width: 46rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.stage-chrome > * {
+  width: 100%;
+  margin: 0;
 }
 
 #qr {
   display: block;
   margin: 0 auto;
   background: #fff;
+  border-radius: var(--radius);
   image-rendering: pixelated;
+}
+
+.stage-hint {
+  margin: 0;
+  color: #d8d5cd;
+  font-size: 12.5px;
 }
 
 .stage-actions {
@@ -435,21 +783,58 @@ input[type="range"] {
   margin-top: 1rem;
 }
 
-/* Fullscreen is a page STATE, never an overlay element. Safari 26 samples a
-   fixed layer for its chrome tint and latches it, so every overlay variant
-   leaves white bands behind after it closes; a flow layout that simply reflows
-   on exit leaves nothing to latch. */
-body.qr-full .wrap > *:not(.stage),
+.stage .stage-actions button {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.25);
+  color: #f3f1ec;
+}
+
+.stage .stage-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.stage h2 {
+  color: rgb(255 255 255 / 0.55);
+}
+
+.stage .metrics {
+  background: rgb(255 255 255 / 0.18);
+  border-color: rgb(255 255 255 / 0.18);
+}
+
+.stage .metric {
+  background: rgb(255 255 255 / 0.06);
+}
+
+.stage .metric .k {
+  color: rgb(255 255 255 / 0.55);
+}
+
+.stage .metric .v {
+  color: #f3f1ec;
+}
+
+body.stage-open:not(.qr-full) {
+  background: #16151a;
+}
+
+body.stage-open:not(.qr-full) .wrap {
+  max-width: none;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+body.stage-open .wrap > *:not(.stage),
 body.qr-full .stage > *:not(#qr) {
   display: none;
 }
 
 body.qr-full {
   background: #fff;
-}
-
-body.qr-full::after {
-  display: none;
 }
 
 body.qr-full .wrap {
@@ -461,16 +846,13 @@ body.qr-full .wrap {
   min-height: 100dvh;
 }
 
-body.qr-full .stage {
-  margin: 0;
-}
-
 /* ---- receiver ----------------------------------------------------------- */
 
 .viewport {
   position: relative;
   margin-top: 1.5rem;
   border: var(--rule);
+  border-radius: var(--radius);
   background: #000;
   overflow: hidden;
 }
@@ -508,14 +890,15 @@ body.qr-full .stage {
 
 .track {
   height: 3px;
+  border-radius: 2px;
   background: var(--line-hot);
+  overflow: hidden;
 }
 
 .track > .bar {
   height: 100%;
   width: 0;
   background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
   transition: width 0.2s linear;
 }
 
@@ -526,7 +909,8 @@ body.qr-full .stage {
 
 .hint {
   border: 1px solid var(--warn);
-  border-left-width: 2px;
+  border-left-width: 3px;
+  border-radius: var(--radius);
   background: var(--bg-1);
   padding: 0.75rem;
   margin-top: 1rem;
@@ -534,9 +918,8 @@ body.qr-full .stage {
 
 .hint h3 {
   margin: 0 0 0.4rem;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--warn);
 }
 
@@ -546,10 +929,42 @@ body.qr-full .stage {
   color: var(--fg-dim);
 }
 
+/* ---- tip callout ---------------------------------------------------------- */
+
+.tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 1rem;
+  border: var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg-1);
+}
+
+.tip-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  color: var(--accent);
+}
+
+.tip p {
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+.tip p strong {
+  color: var(--fg);
+}
+
 .result {
   margin-top: 1.5rem;
   border: var(--rule);
-  border-left: 2px solid var(--accent);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
   background: var(--bg-1);
   padding: 1rem;
 }
@@ -560,9 +975,8 @@ body.qr-full .stage {
 
 .result h3 {
   margin: 0 0 0.5rem;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent);
 }
 
@@ -576,6 +990,8 @@ body.qr-full .stage {
   padding: 0.6rem;
   background: var(--bg);
   border: var(--rule);
+  border-radius: var(--radius);
+  font-family: var(--mono);
   white-space: pre-wrap;
 }
 
@@ -584,6 +1000,7 @@ body.qr-full .stage {
   max-width: 100%;
   margin-top: 0.75rem;
   border: var(--rule);
+  border-radius: var(--radius);
 }
 
 /* ---- the terminal one-liner -------------------------------------------- */
@@ -594,6 +1011,8 @@ body.qr-full .stage {
   gap: 1px;
   background: var(--line);
   border: var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
   margin: 0.75rem 0;
 }
 
@@ -608,6 +1027,7 @@ body.qr-full .stage {
 
 .oneliner > button {
   border: 0;
+  border-radius: 0;
   flex: none;
 }
 

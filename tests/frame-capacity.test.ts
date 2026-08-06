@@ -9,7 +9,13 @@ import {
   sourceBlockCount,
 } from "../shared/frame-capacity.ts";
 import { HEADER_LEN, MAX_FILE_BYTES } from "../shared/protocol.ts";
-import { FRAME_BYTES_OPTIONS } from "../shared/send-settings.ts";
+import {
+  ECC_LEVELS,
+  FRAME_BYTES_OPTIONS,
+  MAX_FRAME_BYTES_BY_ECC,
+  largestFrameBytesFor,
+} from "../shared/send-settings.ts";
+import QRCode from "qrcode";
 
 /** The sender's actual bytes/frame dropdown — these tests hold for the options
  *  really on offer, not a copy that can drift. */
@@ -77,4 +83,52 @@ test("an offered option always exists for any legal payload", () => {
 
 test("no suggestion when nothing on offer is big enough", () => {
   assert.equal(smallestSufficientFrameSize(MAX_SOURCE_BLOCKS * 4000, OFFERED), undefined);
+});
+
+/** Encode `bytes` of byte-mode payload at this ECC, unpinned version. */
+const encodes = (bytes: number, ecc: string): boolean => {
+  try {
+    QRCode.create([{ data: new Uint8Array(bytes), mode: "byte" } as never], {
+      errorCorrectionLevel: ecc as "L",
+      maskPattern: 4,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+test("the per-ECC ceiling is exactly what the encoder will take", () => {
+  // Asserted against the real encoder, not transcribed from a table: these
+  // numbers decide which options the sender is allowed to offer, and a wrong
+  // one either hides a usable frame size or offers one that cannot encode.
+  for (const ecc of ECC_LEVELS) {
+    const cap = MAX_FRAME_BYTES_BY_ECC[ecc];
+    assert.ok(encodes(cap, ecc), `ECC ${ecc} should encode ${cap} bytes`);
+    assert.ok(!encodes(cap + 1, ecc), `ECC ${ecc} should not encode ${cap + 1} bytes`);
+  }
+});
+
+test("every ECC keeps at least one usable frame size, and it encodes", () => {
+  // The bug this guards: the dropdown was written against L, whose ceiling is
+  // the largest option, so raising the ECC offered frame sizes that no QR
+  // version can hold and the stream died on its first frame.
+  for (const ecc of ECC_LEVELS) {
+    const largest = largestFrameBytesFor(ecc);
+    assert.ok(OFFERED.includes(largest), `${largest} is not an offered option`);
+    assert.ok(largest <= MAX_FRAME_BYTES_BY_ECC[ecc]);
+    assert.ok(encodes(largest, ecc), `ECC ${ecc} cannot encode its own largest option`);
+  }
+});
+
+test("every offered frame size encodes at the ECC levels that allow it", () => {
+  for (const ecc of ECC_LEVELS) {
+    for (const frameBytes of OFFERED) {
+      assert.equal(
+        encodes(frameBytes, ecc),
+        frameBytes <= MAX_FRAME_BYTES_BY_ECC[ecc],
+        `ECC ${ecc} at ${frameBytes} bytes disagrees with the ceiling`,
+      );
+    }
+  }
 });

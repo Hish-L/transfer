@@ -1,70 +1,108 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>transfer — files over light</title>
+<title>flight — files over light</title>
 <meta
   name="description"
-  content="Move a file between two devices with nothing but a screen and a camera. Fountain-coded animated QR codes, no network path, no pairing, no app."
+  content="Move a file between two devices with nothing but a screen and a camera. No network, no pairing, no app."
 />
 <link rel="stylesheet" href="./shared/theme.css" />
 
 <div class="wrap">
   <header class="masthead">
-    <h1 class="wordmark">transfer</h1>
-    <p class="tagline">files over light</p>
+    <!-- "Flight" is "F" + "light", and the tagline is "Files over " + "light" —
+         the same word ends both, so the F can grow into the whole phrase and
+         back without anything else moving. -->
+    <h1 class="wordmark">
+      <span class="f-accent">F<span class="f-grow"><span>iles over&nbsp;</span></span></span>light
+    </h1>
   </header>
 
-  <p style="margin-top: 1.5rem">
-    One screen displays a file as an endless stream of QR codes. Another device points a camera at
-    it and rebuilds the file. There is no network path between them — no Wi-Fi, no Bluetooth, no
-    pairing, no account. The bytes cross as light.
-  </p>
+  <p class="lead">Move a file between two devices with nothing but a screen and a camera.</p>
+
+  <div class="hero">
+    <svg viewBox="0 0 340 138" role="img" aria-label="A file leaves one screen as QR codes and is
+      read back by another device's camera, with no network between them.">
+      <!-- sending screen -->
+      <rect class="dev" x="9" y="16" width="104" height="84" rx="9" />
+      <!-- Spans y 29-87 inside a device of y 16-100: 13px of quiet zone above
+           and below, matching the 21px already sitting either side. -->
+      <g class="qr">
+        <rect x="30" y="29" width="14" height="14" />
+        <rect x="48" y="29" width="7" height="7" />
+        <rect x="59" y="29" width="7" height="7" />
+        <rect x="78" y="29" width="14" height="14" />
+        <rect x="30" y="47" width="7" height="7" />
+        <rect x="41" y="47" width="7" height="7" />
+        <rect x="59" y="47" width="7" height="7" />
+        <rect x="70" y="47" width="7" height="7" />
+        <rect x="85" y="47" width="7" height="7" />
+        <rect x="30" y="58" width="7" height="7" />
+        <rect x="48" y="58" width="7" height="7" />
+        <rect x="70" y="58" width="7" height="7" />
+        <rect x="85" y="58" width="7" height="7" />
+        <rect x="30" y="73" width="14" height="14" />
+        <rect x="52" y="73" width="7" height="7" />
+        <rect x="63" y="73" width="7" height="7" />
+        <rect x="78" y="73" width="7" height="7" />
+        <rect x="85" y="80" width="7" height="7" />
+      </g>
+
+      <!-- the light crossing the gap -->
+      <g class="beams">
+        <path d="M132 58h20" />
+        <path d="M162 58h20" />
+        <path d="M192 58h20" />
+      </g>
+      <text class="gap-label" x="172" y="34">no network</text>
+
+      <text class="cap" x="61" y="126">screen</text>
+      <text class="cap" x="276" y="126">camera</text>
+
+      <!-- receiving camera -->
+      <rect class="dev" x="240" y="10" width="72" height="96" rx="11" />
+      <circle class="lens" cx="276" cy="49" r="17" />
+      <circle class="lens-eye" cx="276" cy="49" r="7.5" />
+      <rect class="track" x="254" y="82" width="44" height="5" rx="2.5" />
+      <rect class="fill" x="254" y="82" width="44" height="5" rx="2.5" />
+    </svg>
+  </div>
 
   <div class="modes">
     <a class="mode" href="./send/">
       <span class="glyph" aria-hidden="true">&#9632;&#9633;&#9632;</span>
       <span class="name">Send &rarr;</span>
-      <span class="what">Pick a file on this device and start the stream. Up to %MAX_FILE_LABEL%.</span>
+      <span class="what">Pick a file, start the stream. Up to %MAX_FILE_LABEL%.</span>
     </a>
     <a class="mode" href="./receive/">
       <span class="glyph" aria-hidden="true">&#9673;</span>
       <span class="name">Receive &larr;</span>
-      <span class="what">Open the camera and point it at a sending screen.</span>
+      <span class="what">Point a camera at the sending screen.</span>
     </a>
   </div>
 
   <h2>From a terminal</h2>
-  <p>
-    The sender also runs in a terminal — it draws the QR stream with half-block characters and any
-    phone can read it off the glass. macOS and Linux, python3 and nothing else.
-  </p>
+  <p>The sender also runs as a terminal command — macOS and Linux, python3 and nothing else.</p>
   <div class="oneliner">
     <code id="cli-cmd">curl -fsSL https://hish-l.github.io/transfer/qr.sh | bash -s -- myfile.pdf</code>
-    <button type="button" id="cli-copy">Copy</button>
+    <button type="button" data-copy="cli-cmd">Copy</button>
   </div>
-  <p class="dim">
-    Piping a URL into a shell is trust-on-first-use of this origin. If you would rather look first:
-    <code>curl -fsSLO https://hish-l.github.io/transfer/qr.sh &amp;&amp; less qr.sh</code>, then
-    <code>bash qr.sh myfile.pdf</code>.
-  </p>
+  <p class="dim">That pipes a URL into a shell. To read it first:</p>
+  <div class="oneliner">
+    <code id="cli-inspect">curl -fsSLO https://hish-l.github.io/transfer/qr.sh &amp;&amp; less qr.sh</code>
+    <button type="button" data-copy="cli-inspect">Copy</button>
+  </div>
 
   <h2>How it holds together</h2>
   <p>
-    A camera pointed at a screen is a one-way link: the receiver has no way to ask for a frame it
-    missed. So the sender never waits to be asked. It emits an endless stream of
-    <strong>fountain-coded</strong> frames — each one a random XOR of source blocks — and the
-    receiver rebuilds the file from any sufficient set, in any order. Dropped, blurred, duplicated
-    and out-of-order frames cost time and nothing else.
-  </p>
-  <p>
-    Filename and media type survive the trip. Compression is applied only when it actually helps.
-    Nothing is offered to you until its <strong>SHA-256 matches</strong>.
+    The sender streams <strong>fountain-coded</strong> frames endlessly, so a dropped or blurry
+    read just costs time — the receiver rebuilds the file from any sufficient set, in any order,
+    and only shows it to you once its <strong>SHA-256 matches</strong>.
   </p>
 
   <h2>What this is not</h2>
   <p>
-    It is not encrypted. Whatever is on the sending screen is readable by any camera pointed at it,
-    including one you did not notice. The property you get is <em>no network</em>, not
-    confidentiality. Encrypt the file first if that is what you need.
+    Not encrypted — anything on the sending screen is readable by any camera pointed at it.
+    Encrypt the file first if that matters.
   </p>
 
   <hr />

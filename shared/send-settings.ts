@@ -21,3 +21,28 @@ export const FRAME_BYTES_OPTIONS: readonly number[] = [
   2331,
   DEFAULT_FRAME_BYTES,
 ];
+
+export type Ecc = "L" | "M" | "Q" | "H";
+export const ECC_LEVELS: readonly Ecc[] = ["L", "M", "Q", "H"];
+
+/**
+ * Byte-mode capacity of a version-40 QR code at each error correction level.
+ *
+ * This is a hard ceiling on bytes / frame, not a guideline: V40 is the largest
+ * code that exists, so a frame bigger than this cannot be encoded at that ECC
+ * at any size. The two ceilings appear in FRAME_BYTES_OPTIONS above — the list
+ * was written against L, which is why every larger option has to disappear
+ * from the dropdown as the ECC goes up.
+ */
+export const MAX_FRAME_BYTES_BY_ECC: Readonly<Record<Ecc, number>> = {
+  L: 2953,
+  M: 2331,
+  Q: 1663,
+  H: 1273,
+};
+
+/** The largest offered frame size that can actually be encoded at this ECC. */
+export function largestFrameBytesFor(ecc: Ecc): number {
+  const cap = MAX_FRAME_BYTES_BY_ECC[ecc];
+  return Math.max(...FRAME_BYTES_OPTIONS.filter((bytes) => bytes <= cap));
+}

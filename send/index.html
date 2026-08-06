@@ -1,19 +1,29 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>send — transfer</title>
-<meta name="description" content="Stream a file as animated fountain-coded QR codes." />
+<title>send — flight</title>
+<meta name="description" content="Stream a file as animated QR codes." />
 <link rel="stylesheet" href="../shared/theme.css" />
 
 <div class="wrap">
   <header class="masthead">
-    <h1 class="wordmark"><a href="../">transfer</a></h1>
+    <h1 class="wordmark">
+      <a href="../"
+        ><span class="f-accent">F<span class="f-grow"><span>iles over&nbsp;</span></span></span
+        >light</a
+      >
+    </h1>
     <p class="tagline">send</p>
     <nav><a href="../receive/">receive &rarr;</a></nav>
   </header>
 
-  <div class="settings-body" style="border: 0; padding-left: 0; padding-right: 0">
-    <label class="field">
-      <span>file &mdash; up to %MAX_FILE_LABEL%</span>
+  <div class="upload-row">
+    <label class="upload-card" for="cfg-file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 15.5V4M12 4 8 8M12 4l4 4" />
+        <path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3" />
+      </svg>
+      <span class="upload-title" id="upload-name">Choose a file</span>
+      <span class="upload-hint">up to %MAX_FILE_LABEL%</span>
       <input type="file" id="cfg-file" />
     </label>
     <label class="field">
@@ -22,33 +32,8 @@
     </label>
   </div>
 
-  <div class="stage-actions">
-    <button type="button" id="start" class="primary" disabled>Start stream</button>
-    <button type="button" id="stop" disabled>Stop</button>
-    <button type="button" id="full" disabled>Fullscreen</button>
-  </div>
-
-  <p class="status-line" id="status" role="status">pick a file, or paste some text</p>
-
-  <div class="stage" id="stage" hidden>
-    <canvas id="qr" width="1" height="1" aria-label="animated QR code stream"></canvas>
-    <div class="stage-actions">
-      <button type="button" id="exit-full" hidden>Exit fullscreen</button>
-    </div>
-  </div>
-
-  <h2 id="specs-heading" hidden>Stream</h2>
-  <div class="metrics" id="stream-specs" hidden>
-    <div class="metric"><div class="k">tx rate</div><div class="v hot" id="spec-fps">&mdash;</div></div>
-    <div class="metric"><div class="k">frame payload</div><div class="v" id="spec-frame">&mdash;</div></div>
-    <div class="metric"><div class="k">qr</div><div class="v" id="spec-qr">&mdash;</div></div>
-    <div class="metric"><div class="k">fountain blocks</div><div class="v" id="spec-k">&mdash;</div></div>
-    <div class="metric"><div class="k">compression</div><div class="v" id="spec-compression">&mdash;</div></div>
-    <div class="metric"><div class="k">sending</div><div class="v" id="spec-payload">&mdash;</div></div>
-  </div>
-
-  <details class="settings">
-    <summary>Stream settings</summary>
+  <div class="settings settings-static">
+    <div class="settings-title">Stream settings</div>
     <div class="settings-body">
       <label class="field">
         <span>tx fps</span>
@@ -72,19 +57,50 @@
         <input type="range" id="cfg-size" min="300" max="1200" step="50" value="900" />
       </label>
       <p class="settings-note">
-        Bigger frames move more data per code but need a steadier camera. If the receiver sits at
-        zero, drop to 1465 bytes and 24 fps &mdash; that combination reads off almost anything.
-        Changing any setting restarts the stream.
+        Reader stuck at zero? Try 1465 bytes and 24 fps. Any change restarts the stream.
       </p>
     </div>
-  </details>
+  </div>
 
-  <h2>Aim for</h2>
-  <p class="dim">
-    Fill the receiving camera's frame with the code and hold still. The stream never ends and never
-    knows whether anyone is listening &mdash; stop it yourself once the other device says the file is
-    verified.
-  </p>
+  <div class="stage-actions">
+    <button type="button" id="start" class="primary" disabled>Start stream</button>
+  </div>
+
+  <p class="status-line" id="status" role="status">pick a file, or paste some text</p>
+
+  <div class="stage" id="stage" hidden>
+    <canvas id="qr" width="1" height="1" aria-label="animated QR code stream"></canvas>
+
+    <div class="stage-chrome" id="stage-chrome">
+      <div class="metrics" id="stream-specs" hidden>
+        <div class="metric"><div class="k">tx rate</div><div class="v hot" id="spec-fps">&mdash;</div></div>
+        <div class="metric"><div class="k">frame payload</div><div class="v" id="spec-frame">&mdash;</div></div>
+        <div class="metric"><div class="k">qr</div><div class="v" id="spec-qr">&mdash;</div></div>
+        <div class="metric"><div class="k">fountain blocks</div><div class="v" id="spec-k">&mdash;</div></div>
+        <div class="metric"><div class="k">compression</div><div class="v" id="spec-compression">&mdash;</div></div>
+        <div class="metric"><div class="k">sending</div><div class="v" id="spec-payload">&mdash;</div></div>
+      </div>
+
+      <p class="stage-hint">Tap outside to stop</p>
+      <div class="stage-actions">
+        <button type="button" id="full" disabled>Fullscreen</button>
+        <button type="button" id="stop" disabled>Stop</button>
+        <button type="button" id="exit-full" hidden>Exit fullscreen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <svg class="tip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+    <p>
+      <strong>Aim for:</strong> fill the frame, hold still, and stop the stream yourself once the
+      other side says it's verified.
+    </p>
+  </div>
 </div>
 
 <script type="module" src="./main.ts"></script>

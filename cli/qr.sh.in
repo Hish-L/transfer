@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# transfer — send a file as animated QR codes in your terminal.
+# flight — send a file as animated QR codes in your terminal.
 #
 #   curl -fsSL https://hish-l.github.io/transfer/qr.sh | bash -s -- myfile.pdf
 #
@@ -30,7 +30,7 @@ note() { printf '%s\n' "$*" >&2; }
 
 bootstrap_help() {
   cat <<EOF
-qr.sh — bootstrap for the transfer terminal sender (payload v${PAYLOAD_VERSION})
+qr.sh — bootstrap for the flight terminal sender (payload v${PAYLOAD_VERSION})
 
   curl -fsSL ${BASE_URL}/qr.sh | bash -s -- myfile.pdf
 
