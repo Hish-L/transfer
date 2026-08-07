@@ -10,6 +10,7 @@ import { createDecodeWorker } from "./worker-factory";
 import { formatBytes } from "../shared/format";
 import { LTDecoder } from "../shared/fountain";
 import { NoSignalHintTimer } from "../shared/no-signal";
+import { renderPairQr, siblingPageUrl } from "../shared/pair-qr";
 import { probeCameraCapabilities, applyAdvancedConstraint } from "../shared/platform";
 import {
   estimateTransferProgress,
@@ -48,6 +49,9 @@ const cfgWidth = el<HTMLSelectElement>("cfg-width");
 const cfgCapFps = el<HTMLSelectElement>("cfg-capfps");
 const cfgWorkers = el<HTMLSelectElement>("cfg-workers");
 const cameraActual = el<HTMLElement>("camera-actual");
+const pair = el<HTMLDivElement>("pair");
+const pairQr = el<HTMLCanvasElement>("pair-qr");
+const pairUrl = el<HTMLElement>("pair-url");
 const status = statusLine(el<HTMLElement>("status"));
 
 const grab = document.createElement("canvas");
@@ -152,6 +156,9 @@ async function start(): Promise<void> {
   // having presented nothing), rVFC then never fires, and the capture chain is
   // dead for good — the camera is live but the page sits at 0 capture fps.
   viewport.hidden = false;
+  // The pairing code is for getting a second device here; once this one is
+  // looking at a screen it is only clutter above the preview.
+  pair.hidden = true;
   startBtn.disabled = true;
   stopBtn.disabled = false;
   diagnostics.open = true;
@@ -244,6 +251,7 @@ function stop(): void {
   // Each worker holds its own ~940 KB of WASM; this is how that comes back.
   pool.resize(0);
   viewport.hidden = true;
+  pair.hidden = false;
   startBtn.disabled = false;
   stopBtn.disabled = true;
   status.setStatus("stopped");
@@ -477,6 +485,7 @@ async function finish(payload: Uint8Array, checksumOk: boolean, seconds: number)
   video.srcObject = null;
   pool.resize(0);
   removeHint();
+  pair.hidden = false;
   startBtn.disabled = false;
   stopBtn.disabled = true;
   diagnosticsSummary.textContent = "Transfer summary";
@@ -597,3 +606,8 @@ cfgWorkers.addEventListener("change", () => {
   pool.resize(Number(cfgWorkers.value));
   reportCamera();
 });
+
+// The pairing code sends the other device to the sender.
+const sendUrl = siblingPageUrl("../send/");
+pairUrl.textContent = sendUrl;
+renderPairQr(pairQr, sendUrl, 132);

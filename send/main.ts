@@ -14,6 +14,7 @@ import {
   minimumFrameBytes,
   smallestSufficientFrameSize,
 } from "../shared/frame-capacity";
+import { renderPairQr, siblingPageUrl } from "../shared/pair-qr";
 import { fnv1a, packFile, packFrame, type CompressionMode } from "../shared/protocol";
 import { rasterizeQr } from "../shared/qr-raster";
 import {
@@ -43,6 +44,8 @@ const exitFullBtn = el<HTMLButtonElement>("exit-full");
 const stage = el<HTMLDivElement>("stage");
 const canvas = el<HTMLCanvasElement>("qr");
 const uploadName = el<HTMLElement>("upload-name");
+const pairQr = el<HTMLCanvasElement>("pair-qr");
+const pairUrl = el<HTMLElement>("pair-url");
 const stageChrome = el<HTMLDivElement>("stage-chrome");
 const specs = el<HTMLDivElement>("stream-specs");
 const status = statusLine(el<HTMLElement>("status"));
@@ -408,3 +411,9 @@ document.addEventListener("click", (e) => {
 
 constrainFrameBytesToEcc();
 setControls();
+
+// The pairing code sends the other device to the receiver. Nothing hides it on
+// this page: body.stage-open already hides every .wrap child but the stage.
+const receiveUrl = siblingPageUrl("../receive/");
+pairUrl.textContent = receiveUrl;
+renderPairQr(pairQr, receiveUrl, 132);

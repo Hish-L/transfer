@@ -25,6 +25,21 @@
 
   <p class="status-line" id="status" role="status">point this camera at a sending screen</p>
 
+  <div class="pair" id="pair">
+    <canvas
+      class="pair-qr"
+      id="pair-qr"
+      width="1"
+      height="1"
+      aria-label="QR code linking to the send page"
+    ></canvas>
+    <div class="pair-text">
+      <strong>Other device?</strong>
+      <p>Scan with its camera to open the sender.</p>
+      <code class="pair-url" id="pair-url"></code>
+    </div>
+  </div>
+
   <div class="viewport" id="viewport" hidden>
     <video id="video" playsinline muted></video>
     <div class="hud">
