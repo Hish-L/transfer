@@ -670,6 +670,28 @@ input[type="range"] {
   color: var(--fg-dim);
 }
 
+/* ---- action row with inline settings -------------------------------------
+   The receiver's camera controls all apply to a live track, so they sit beside
+   the start button instead of at the foot of the page. Closed, the disclosure
+   is just another chip in the row; open, `flex-basis: 100%` drops it onto its
+   own line so the body still gets the full width to lay its grid out in. */
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.controls-row .settings-inline {
+  margin-top: 0;
+}
+
+.controls-row .settings-inline[open] {
+  flex-basis: 100%;
+}
+
 .settings-note {
   grid-column: 1 / -1;
   color: var(--fg-dim);

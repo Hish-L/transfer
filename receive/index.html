@@ -18,9 +18,41 @@
     <nav><a href="../send/">send &rarr;</a></nav>
   </header>
 
-  <div class="stage-actions" style="justify-content: flex-start; margin-top: 1.25rem">
+  <!-- Camera settings ride in the action row rather than at the foot of the
+       page: every control in here applies to a live track, so they are worth
+       reaching for mid-transfer. -->
+  <div class="controls-row">
     <button type="button" id="start" class="primary">Start camera</button>
     <button type="button" id="stop" disabled>Stop</button>
+    <details class="settings settings-inline">
+      <summary>Camera settings</summary>
+      <div class="settings-body">
+        <label class="field">
+          <span>capture width</span>
+          <select id="cfg-width">
+            <option value="960">960</option>
+            <option value="1280" selected>1280</option>
+            <option value="1920">1920</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>capture fps</span>
+          <select id="cfg-capfps">
+            <option value="30">30</option>
+            <option value="60" selected>60</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>decode workers</span>
+          <select id="cfg-workers">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+        <p class="settings-note" id="camera-actual">camera not started</p>
+      </div>
+    </details>
   </div>
 
   <p class="status-line" id="status" role="status">point this camera at a sending screen</p>
@@ -90,35 +122,6 @@
     </div>
   </details>
 
-  <details class="settings">
-    <summary>Camera settings</summary>
-    <div class="settings-body">
-      <label class="field">
-        <span>capture width</span>
-        <select id="cfg-width">
-          <option value="960">960</option>
-          <option value="1280" selected>1280</option>
-          <option value="1920">1920</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>capture fps</span>
-        <select id="cfg-capfps">
-          <option value="30">30</option>
-          <option value="60" selected>60</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>decode workers</span>
-        <select id="cfg-workers">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-      </label>
-      <p class="settings-note" id="camera-actual">camera not started</p>
-    </div>
-  </details>
 </div>
 
 <script type="module" src="./main.ts"></script>
