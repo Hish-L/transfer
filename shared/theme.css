@@ -160,11 +160,34 @@ header.masthead {
 .masthead nav {
   margin-left: auto;
   display: flex;
+  /* The mark is taller than the nav text, so items centre on each other
+     rather than sitting on a shared baseline. */
+  align-items: center;
+  /* And the nav itself opts out of the masthead's baseline: with only the icon
+     in it (the home page) there is no text to take a baseline from, so the
+     icon's bottom edge would be used instead and push the rule down. */
+  align-self: center;
   gap: 1rem;
 }
 
 .masthead nav a {
   font-size: 13px;
+}
+
+.masthead nav .gh {
+  display: inline-flex;
+  color: var(--fg-dim);
+}
+
+.masthead nav .gh svg {
+  width: 30px;
+  height: 30px;
+  fill: currentColor;
+}
+
+.masthead nav .gh:hover {
+  color: var(--fg);
+  background: none;
 }
 
 h2 {
