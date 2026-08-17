@@ -42,14 +42,13 @@ const resultEl = el<HTMLDivElement>("result");
 const resultHeading = el<HTMLElement>("result-heading");
 const resultSummary = el<HTMLElement>("result-summary");
 const resultBody = el<HTMLDivElement>("result-body");
-const diagnostics = el<HTMLDetailsElement>("diagnostics");
+const stepCamera = el<HTMLLIElement>("step-camera");
 const diagnosticsSummary = el<HTMLElement>("diagnostics-summary");
 const spark = el<HTMLCanvasElement>("spark");
 const cfgWidth = el<HTMLSelectElement>("cfg-width");
 const cfgCapFps = el<HTMLSelectElement>("cfg-capfps");
 const cfgWorkers = el<HTMLSelectElement>("cfg-workers");
 const cameraActual = el<HTMLElement>("camera-actual");
-const pair = el<HTMLDivElement>("pair");
 const pairQr = el<HTMLCanvasElement>("pair-qr");
 const pairUrl = el<HTMLElement>("pair-url");
 const status = statusLine(el<HTMLElement>("status"));
@@ -156,12 +155,9 @@ async function start(): Promise<void> {
   // having presented nothing), rVFC then never fires, and the capture chain is
   // dead for good — the camera is live but the page sits at 0 capture fps.
   viewport.hidden = false;
-  // The pairing code is for getting a second device here; once this one is
-  // looking at a screen it is only clutter above the preview.
-  pair.hidden = true;
   startBtn.disabled = true;
   stopBtn.disabled = false;
-  diagnostics.open = true;
+  stepCamera.setAttribute("data-done", "");
   diagnosticsSummary.textContent = "Live diagnostics";
 
   video.srcObject = stream;
@@ -251,9 +247,9 @@ function stop(): void {
   // Each worker holds its own ~940 KB of WASM; this is how that comes back.
   pool.resize(0);
   viewport.hidden = true;
-  pair.hidden = false;
   startBtn.disabled = false;
   stopBtn.disabled = true;
+  stepCamera.removeAttribute("data-done");
   status.setStatus("stopped");
 }
 
@@ -485,7 +481,7 @@ async function finish(payload: Uint8Array, checksumOk: boolean, seconds: number)
   video.srcObject = null;
   pool.resize(0);
   removeHint();
-  pair.hidden = false;
+  stepCamera.removeAttribute("data-done");
   startBtn.disabled = false;
   stopBtn.disabled = true;
   diagnosticsSummary.textContent = "Transfer summary";

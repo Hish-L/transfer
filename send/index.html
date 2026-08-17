@@ -13,27 +13,97 @@
       >
     </h1>
     <p class="tagline">send</p>
-    <nav><a href="../receive/">receive &rarr;</a></nav>
+    <nav><a href="../receive/">receive &rarr;</a><a class="gh" href="https://github.com/Hish-L/transfer" title="Source on GitHub" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a></nav>
   </header>
 
-  <div class="upload-row">
-    <label class="upload-card" for="cfg-file">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 15.5V4M12 4 8 8M12 4l4 4" />
-        <path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3" />
-      </svg>
-      <span class="upload-title" id="upload-name">Choose a file</span>
-      <span class="upload-hint">up to %MAX_FILE_LABEL%</span>
-      <input type="file" id="cfg-file" />
-    </label>
-    <label class="field">
-      <span>or a text snippet &mdash; up to %MAX_SNIPPET_LABEL%</span>
-      <textarea id="cfg-text" placeholder="paste text to send instead"></textarea>
-    </label>
+  <ol class="steps">
+    <li id="step-pick">
+      <h2>Pick a file, or text what to send</h2>
+      <div class="step-body">
+        <div class="upload-row">
+          <label class="upload-card" for="cfg-file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 15.5V4M12 4 8 8M12 4l4 4" />
+              <path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3" />
+            </svg>
+            <span class="upload-title" id="upload-name">Choose a file</span>
+            <span class="upload-hint">up to %MAX_FILE_LABEL%</span>
+            <input type="file" id="cfg-file" />
+          </label>
+          <textarea
+            id="cfg-text"
+            aria-label="Text to send"
+            placeholder="…or paste text here — up to %MAX_SNIPPET_LABEL%"
+          ></textarea>
+        </div>
+      </div>
+    </li>
+
+    <li>
+      <h2>Scan this code with the other device</h2>
+      <div class="step-body">
+        <div class="pair" id="pair">
+          <canvas
+            class="pair-qr"
+            id="pair-qr"
+            width="1"
+            height="1"
+            aria-label="QR code linking to the receive page"
+          ></canvas>
+          <div class="pair-text">
+            <p>
+              Open the other device's ordinary camera app and point it at this code. It lands on
+              the receive page, ready to catch the file.
+            </p>
+            <code class="pair-url" id="pair-url"></code>
+          </div>
+        </div>
+      </div>
+    </li>
+
+    <li>
+      <h2>Start the stream and show this screen to that camera</h2>
+      <div class="step-body">
+        <div class="stage-actions">
+          <button type="button" id="start" class="primary" disabled>Start stream</button>
+        </div>
+        <p class="step-hint">
+          The code fills this screen. Hold it steady so it fills the other camera's view, and stop
+          the stream once the other device says verified.
+        </p>
+      </div>
+    </li>
+  </ol>
+
+  <!-- Errors only: statusLine() keeps this hidden until something fails. -->
+  <p class="status-line" id="status" role="status" hidden></p>
+
+  <div class="stage" id="stage" hidden>
+    <canvas id="qr" width="1" height="1" aria-label="animated QR code stream"></canvas>
+
+    <div class="stage-chrome" id="stage-chrome">
+      <div class="metrics" id="stream-specs" hidden>
+        <div class="metric"><div class="k">tx rate</div><div class="v hot" id="spec-fps">&mdash;</div></div>
+        <div class="metric"><div class="k">frame payload</div><div class="v" id="spec-frame">&mdash;</div></div>
+        <div class="metric"><div class="k">qr</div><div class="v" id="spec-qr">&mdash;</div></div>
+        <div class="metric"><div class="k">fountain blocks</div><div class="v" id="spec-k">&mdash;</div></div>
+        <div class="metric"><div class="k">compression</div><div class="v" id="spec-compression">&mdash;</div></div>
+        <div class="metric"><div class="k">sending</div><div class="v" id="spec-payload">&mdash;</div></div>
+      </div>
+
+      <p class="stage-hint">Tap outside to stop</p>
+      <div class="stage-actions">
+        <button type="button" id="full" disabled>Fullscreen</button>
+        <button type="button" id="stop" disabled>Stop</button>
+        <button type="button" id="exit-full" hidden>Exit fullscreen</button>
+      </div>
+    </div>
   </div>
 
-  <div class="settings settings-static">
-    <div class="settings-title">Stream settings</div>
+  <!-- Collapsed: the defaults work, and nobody has to open this to send a file.
+       Any change here restarts a running stream. -->
+  <details class="settings">
+    <summary>Stream settings &mdash; only if something isn't reading</summary>
     <div class="settings-body">
       <label class="field">
         <span>tx fps</span>
@@ -60,62 +130,7 @@
         Reader stuck at zero? Try 1465 bytes and 24 fps. Any change restarts the stream.
       </p>
     </div>
-  </div>
-
-  <div class="pair" id="pair">
-    <canvas
-      class="pair-qr"
-      id="pair-qr"
-      width="1"
-      height="1"
-      aria-label="QR code linking to the receive page"
-    ></canvas>
-    <div class="pair-text">
-      <strong>Other device?</strong>
-      <p>Scan with its camera to open the receiver.</p>
-      <code class="pair-url" id="pair-url"></code>
-    </div>
-  </div>
-
-  <div class="stage-actions">
-    <button type="button" id="start" class="primary" disabled>Start stream</button>
-  </div>
-
-  <p class="status-line" id="status" role="status">pick a file, or paste some text</p>
-
-  <div class="stage" id="stage" hidden>
-    <canvas id="qr" width="1" height="1" aria-label="animated QR code stream"></canvas>
-
-    <div class="stage-chrome" id="stage-chrome">
-      <div class="metrics" id="stream-specs" hidden>
-        <div class="metric"><div class="k">tx rate</div><div class="v hot" id="spec-fps">&mdash;</div></div>
-        <div class="metric"><div class="k">frame payload</div><div class="v" id="spec-frame">&mdash;</div></div>
-        <div class="metric"><div class="k">qr</div><div class="v" id="spec-qr">&mdash;</div></div>
-        <div class="metric"><div class="k">fountain blocks</div><div class="v" id="spec-k">&mdash;</div></div>
-        <div class="metric"><div class="k">compression</div><div class="v" id="spec-compression">&mdash;</div></div>
-        <div class="metric"><div class="k">sending</div><div class="v" id="spec-payload">&mdash;</div></div>
-      </div>
-
-      <p class="stage-hint">Tap outside to stop</p>
-      <div class="stage-actions">
-        <button type="button" id="full" disabled>Fullscreen</button>
-        <button type="button" id="stop" disabled>Stop</button>
-        <button type="button" id="exit-full" hidden>Exit fullscreen</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="tip">
-    <svg class="tip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1" />
-    </svg>
-    <p>
-      <strong>Aim for:</strong> fill the frame, hold still, and stop the stream yourself once the
-      other side says it's verified.
-    </p>
-  </div>
+  </details>
 </div>
 
 <script type="module" src="./main.ts"></script>

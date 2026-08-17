@@ -462,16 +462,6 @@ hr {
   margin-top: 1.5rem;
 }
 
-.upload-row .field {
-  display: flex;
-  flex-direction: column;
-}
-
-.upload-row .field textarea {
-  flex: 1;
-  min-height: 7.5rem;
-}
-
 .upload-card {
   position: relative;
   display: flex;
@@ -524,6 +514,26 @@ hr {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* The snippet box wears the file card's dashed frame and fills its whole grid
+   cell — the step heading names it, so it needs no label of its own. */
+.upload-row textarea {
+  min-height: 7.5rem; /* the card's, so the row is the same height either way */
+  height: 100%;
+  padding: 0.75rem;
+  border: 1.5px dashed var(--line-hot);
+  background: var(--bg-1);
+  resize: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.upload-row textarea:hover,
+.upload-row textarea:focus {
+  border-color: var(--accent-dim);
+  background: var(--bg-2);
 }
 
 /* ---- generic controls --------------------------------------------------- */
@@ -610,38 +620,15 @@ input[type="range"] {
   display: none !important;
 }
 
-/* ---- status line -------------------------------------------------------- */
+/* ---- status line (errors only) ------------------------------------------ */
 
 .status-line {
   margin-top: 1rem;
   padding: 0.5rem 0.75rem;
-  border-left: 2px solid var(--line-hot);
+  border-left: 2px solid var(--err);
   border-radius: 0 var(--radius) var(--radius) 0;
   background: var(--bg-1);
-  color: var(--fg-dim);
-  min-height: 2.2rem;
-}
-
-.status-line::after {
-  content: "\2588";
-  color: var(--accent);
-  animation: blink 1.1s step-end infinite;
-  margin-left: 0.35ch;
-}
-
-.status-line.error {
-  border-left-color: var(--err);
   color: var(--err);
-}
-
-.status-line.error::after {
-  content: "";
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
 }
 
 /* ---- settings ----------------------------------------------------------- */
@@ -664,13 +651,6 @@ input[type="range"] {
 
 .settings > summary:hover {
   color: var(--accent);
-}
-
-.settings-title {
-  padding: 0.6rem 0.85rem;
-  color: var(--fg-dim);
-  font-weight: 600;
-  font-size: 13px;
 }
 
 .settings-body {
@@ -974,37 +954,6 @@ body.qr-full .wrap {
   color: var(--fg-dim);
 }
 
-/* ---- tip callout ---------------------------------------------------------- */
-
-.tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  margin-top: 1.5rem;
-  padding: 0.75rem 1rem;
-  border: var(--rule);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--bg-1);
-}
-
-.tip-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  margin-top: 0.15rem;
-  color: var(--accent);
-}
-
-.tip p {
-  margin: 0;
-  color: var(--fg-dim);
-}
-
-.tip p strong {
-  color: var(--fg);
-}
-
 /* ---- pairing card (scan to open the opposite page) ------------------------ */
 
 .pair {
@@ -1092,6 +1041,93 @@ body.qr-full .wrap {
   margin-top: 0.75rem;
   border: var(--rule);
   border-radius: var(--radius);
+}
+
+/* ---- guided steps --------------------------------------------------------
+   Both transfer pages are a numbered list of things to do, in order, so the
+   page reads as instructions rather than as a control panel. A step that is
+   satisfied swaps its number for a tick; nothing is hidden or disabled, so a
+   step can always be revisited. */
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  display: grid;
+  gap: 0.85rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.steps > li {
+  counter-increment: step;
+  padding: 0.9rem 1rem 1rem;
+  border: var(--rule);
+  border-left: 3px solid var(--line-hot);
+  border-radius: var(--radius);
+  background: var(--bg-1);
+}
+
+.steps > li[data-done] {
+  border-left-color: var(--accent);
+}
+
+.steps > li > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--fg);
+}
+
+.steps > li > h2::before {
+  content: counter(step);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--bg-2);
+  border: 1px solid var(--line-hot);
+  color: var(--fg-dim);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.steps > li[data-done] > h2::before {
+  content: "\2713";
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.step-hint {
+  margin: 0.4rem 0 0;
+  color: var(--fg-dim);
+  font-size: 13.5px;
+}
+
+/* Everything nested in a step already sits inside the step's own card, so the
+   first child never adds a second top margin, and the pairing card drops its
+   box entirely. */
+.step-body {
+  margin-top: 0.75rem;
+}
+
+.step-body > :first-child,
+.step-body > :first-child > :first-child {
+  margin-top: 0;
+}
+
+.step-body .pair {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
 /* ---- the terminal one-liner -------------------------------------------- */

@@ -44,6 +44,7 @@ const exitFullBtn = el<HTMLButtonElement>("exit-full");
 const stage = el<HTMLDivElement>("stage");
 const canvas = el<HTMLCanvasElement>("qr");
 const uploadName = el<HTMLElement>("upload-name");
+const stepPick = el<HTMLLIElement>("step-pick");
 const pairQr = el<HTMLCanvasElement>("pair-qr");
 const pairUrl = el<HTMLElement>("pair-url");
 const stageChrome = el<HTMLDivElement>("stage-chrome");
@@ -72,6 +73,7 @@ interface Source {
 let source: Source | undefined;
 
 function setControls(): void {
+  stepPick.toggleAttribute("data-done", hasInput());
   startBtn.disabled = streaming || !hasInput();
   stopBtn.disabled = !streaming;
   fullBtn.disabled = !streaming;
