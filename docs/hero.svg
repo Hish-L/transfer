@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 138" width="520" role="img"
+     aria-label="A file leaves one screen as QR codes and is read back by another device's camera, with no network between them.">
+  <title>flight — a file leaves one screen as QR codes and is read back by another device's camera</title>
+  <!-- Standalone copy of the landing-page hero (index.html + shared/theme.css)
+       for the README. Self-contained: an <img>-loaded SVG runs no scripts, so
+       everything here is declarative CSS. -->
+  <style>
+    svg {
+      --bg: #faf8f5;
+      --bg-1: #f2efe9;
+      --bg-2: #eae6de;
+      --line-hot: #d6d0c5;
+      --fg: #1a1a18;
+      --fg-dim: #7a766e;
+      --fg-faint: #a8a399;
+      --accent: #c9862c;
+      background: var(--bg);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --bg: #17171a;
+        --bg-1: #1e1e21;
+        --bg-2: #26262a;
+        --line-hot: #38373a;
+        --fg: #e8e6e1;
+        --fg-dim: #96938c;
+        --fg-faint: #5c5a56;
+        --accent: #e0a750;
+      }
+    }
+
+    text {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      fill: var(--fg-dim);
+      text-anchor: middle;
+    }
+    .cap { font-size: 11px; }
+    .gap-label {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      fill: var(--fg-faint);
+    }
+
+    .dev { fill: var(--bg-1); stroke: var(--line-hot); stroke-width: 2; }
+
+    .qr rect { fill: var(--fg); animation: qr-flicker 2.4s steps(1, end) infinite; }
+    /* Only the data modules blink; the three corner squares are the finder
+       pattern and hold still, which is what makes it read as a QR code. */
+    .qr rect:nth-child(1),
+    .qr rect:nth-child(4),
+    .qr rect:nth-child(14) { animation: none; }
+    .qr rect:nth-child(3n) { animation-delay: -0.8s; }
+    .qr rect:nth-child(3n + 1) { animation-delay: -1.6s; }
+
+    .beams path {
+      stroke: var(--accent);
+      stroke-width: 3;
+      stroke-linecap: round;
+      animation: beam 1.8s ease-in-out infinite;
+    }
+    .beams path:nth-child(2) { animation-delay: 0.2s; }
+    .beams path:nth-child(3) { animation-delay: 0.4s; }
+
+    .lens { fill: var(--bg-2); stroke: var(--line-hot); stroke-width: 2; }
+    .lens-eye { fill: var(--accent); animation: lens-pulse 1.8s ease-in-out infinite; }
+
+    .track { fill: var(--line-hot); }
+    .fill {
+      fill: var(--accent);
+      /* fill-box, so scaleX grows from the bar's own left edge rather than from
+         the origin of the whole view-box. */
+      transform-box: fill-box;
+      transform-origin: left center;
+      animation: fill-up 5.4s ease-in-out infinite;
+    }
+
+    @keyframes qr-flicker {
+      0%, 33% { opacity: 1; }
+      34%, 66% { opacity: 0.18; }
+      67%, 100% { opacity: 1; }
+    }
+    @keyframes beam {
+      0% { opacity: 0; transform: translateX(-10px); }
+      35% { opacity: 1; }
+      70% { opacity: 0; transform: translateX(14px); }
+      100% { opacity: 0; transform: translateX(14px); }
+    }
+    @keyframes lens-pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+    @keyframes fill-up {
+      0% { transform: scaleX(0); }
+      85%, 100% { transform: scaleX(1); }
+    }
+
+    /* Without a resting state the beams would freeze mid-fade at opacity 0 and
+       the bar at zero width. */
+    @media (prefers-reduced-motion: reduce) {
+      .beams path, .lens-eye, .qr rect { animation: none; opacity: 1; }
+      .fill { animation: none; transform: scaleX(0.6); }
+    }
+  </style>
+
+  <!-- sending screen -->
+  <rect class="dev" x="9" y="16" width="104" height="84" rx="9" />
+  <!-- Spans y 29-87 inside a device of y 16-100: 13px of quiet zone above and
+       below, matching the 21px already sitting either side. -->
+  <g class="qr">
+    <rect x="30" y="29" width="14" height="14" />
+    <rect x="48" y="29" width="7" height="7" />
+    <rect x="59" y="29" width="7" height="7" />
+    <rect x="78" y="29" width="14" height="14" />
+    <rect x="30" y="47" width="7" height="7" />
+    <rect x="41" y="47" width="7" height="7" />
+    <rect x="59" y="47" width="7" height="7" />
+    <rect x="70" y="47" width="7" height="7" />
+    <rect x="85" y="47" width="7" height="7" />
+    <rect x="30" y="58" width="7" height="7" />
+    <rect x="48" y="58" width="7" height="7" />
+    <rect x="70" y="58" width="7" height="7" />
+    <rect x="85" y="58" width="7" height="7" />
+    <rect x="30" y="73" width="14" height="14" />
+    <rect x="52" y="73" width="7" height="7" />
+    <rect x="63" y="73" width="7" height="7" />
+    <rect x="78" y="73" width="7" height="7" />
+    <rect x="85" y="80" width="7" height="7" />
+  </g>
+
+  <!-- the light crossing the gap -->
+  <g class="beams">
+    <path d="M132 58h20" />
+    <path d="M162 58h20" />
+    <path d="M192 58h20" />
+  </g>
+  <text class="gap-label" x="172" y="34">NO NETWORK</text>
+
+  <text class="cap" x="61" y="126">screen</text>
+  <text class="cap" x="276" y="126">camera</text>
+
+  <!-- receiving camera -->
+  <rect class="dev" x="240" y="10" width="72" height="96" rx="11" />
+  <circle class="lens" cx="276" cy="49" r="17" />
+  <circle class="lens-eye" cx="276" cy="49" r="7.5" />
+  <rect class="track" x="254" y="82" width="44" height="5" rx="2.5" />
+  <rect class="fill" x="254" y="82" width="44" height="5" rx="2.5" />
+</svg>
